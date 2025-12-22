@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="eng">
+	<head>
+		<title>"Tic-Tac-Toe 3D"</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<style type="text/css">
+
+			.options label {
+				font-size: 12px;
+				font-family: Arial, Helvetica, sans-serif;
+				width: 100px;
+				text-align:left;
+				padding-right: 10px;
+			}
+			#outer-container {
+				display: flex;
+				flex-direction: row;
+			}
+
+			#ylabel-container {
+				display: flex;
+				font-size: 24px;
+				font-weight: bolder;
+				flex-direction: column;
+				width:40px;
+				justify-content: space-evenly;
+			}
+			
+			div.ylabel {
+				text-align: right;
+				flex: 0 0 60px;
+			}
+
+			div.ylabel:first-child {
+				flex: 0 0 10px;
+			}
+
+			div.grid {
+				display: grid;
+				grid-template-columns: repeat(300, 2px);
+				grid-template-rows: repeat(300, 2px);
+				width: 600px;
+				height: 600px;
+				border: 2px solid black;
+				margin-left: 10px;
+			}
+			
+			div.grid > div {
+				margin: 0;
+				padding: 0;
+				border: 0;
+				color: white;
+				background-color: white;
+			}
+
+			div.grid > div.winloseline {
+				background-color: yellow;
+			}
+
+			div.grid > div.online {
+				background-color: black;
+			}
+
+			div.grid div.machine {
+				background-color: red;
+			}
+			div.grid div.user {
+				background-color: blue;
+			}
+
+			div.grid div.none {
+				background-color: white;
+			}
+
+			#form {
+				margin-left: 10px;
+				max-width: 500px;
+			}
+
+			ul li.links {
+				display: inline-block;
+				list-style-type: none;
+				margin: 20px;
+			}
+
+			#status {
+				max-width: 350px;
+			}
+
+			.gamewin {
+				background-color: blue;
+			}
+			.gamelose {
+				background-color: red;
+			}
+			.gamedraw {
+				background-color: yellow;
+			}
+			.gamecontinue {
+			 background-color: green;
+			}
+
+			span.userlegend {
+				background-color: blue;
+			}
+			span.machinelegend {
+				background-color: red;
+			}
+
+		</style>
+	</head>
+	<body>
+		<h3>Tic-Tac-Toe 3D</h3>
+		<div id="outer-container">
+			<div id="ylabel-container">
+				{{range .Ylabel}}
+					<div class="ylabel">{{.}}</div>
+				{{end}}
+			</div>
+			<div id="gridxlabel">
+				<div class="grid">
+					{{range .Grid}}
+						<div class="{{.}}"></div>
+					{{end}}
+				</div>
+				<div id="xlabel-container">
+					{{range .Xlabel}}
+						<div class="xlabel">{{.}}</div>
+					{{end}}
+				</div>
+			</div>
+			<div id="form">
+				<form action="http://127.0.0.1:8080/tictactoe3D" method="post">
+					<fieldset>
+						<legend>Tic-Tac-Toe3D Parameters <span class="userlegend">user X</span> <span class="machinelegend">machine O</span></legend>
+						<p>	
+							Either select which orthogonal axis, i, j, or k to view or move to the next position
+							using the current viewing axis.
+							If moving to the next position, choose the plane and use the respective select list
+							to select the next move from the respective select list.  
+							Start new game with "Start new game" for each plane.
+                            Click <i>Submit</i> after each choice is made.  A 3-D plot of moves will be shown
+							in the current viewing axis.
+					   </p>
+					   <div class="options">
+						    <div>
+								<input type="radio" name="viewmove" id="view" value="view" />
+								<label for="view">Change Axis Planes to View</label>
+								<input type="radio" name="viewmove" id="move" value="move" checked />
+								<label for="move">Move Position</label>
+								<hr />
+								View axis planes 
+								<br />
+								<input type="radio" name="axisplane" id="axisi" value="axisi" checked />
+								<label for="axisi">Axis i</label>
+								<input type="radio" name="axisplane" id="axisj" value="axisj" />
+								<label for="axisj">Axis j</label>
+								<input type="radio" name="axisplane" id="axisk" value="axisk" />
+								<label for="axisk">Axis k</label>
+								<hr />
+						        Select plane A, B, or C for next move position
+								<br />
+								<input type="radio" name="planeselect" id="planeA" value="planeA" checked/>
+								<label for="planeA">Plane A</label>
+								<input type="radio" name="planeselect" id="planeB" value="planeB" />
+								<label for="planeB">Plane B</label>
+								<input type="radio" name="planeselect" id="planeC"  value="planeC" />
+								<label for="planeC">Plane C</label>
+								<hr />
+							</div>
+							<label for="movepositionA" class="movepositionA">Move Position Plane A:</label>
+							<select id="movepositionA" name="movepositionA" required>
+								<option value="startnewgame" selected>Start new game</option>
+								<option value="1" {{.Disable1}}>1</option>
+								<option value="2" {{.Disable2}}>2</option>
+								<option value="3" {{.Disable3}}>3</option>
+								<option value="4" {{.Disable4}}>4</option>
+								<option value="5" {{.Disable5}}>5</option>
+								<option value="6" {{.Disable6}}>6</option>
+								<option value="7" {{.Disable7}}>7</option>
+								<option value="8" {{.Disable8}}>8</option>
+								<option value="9" {{.Disable9}}>9</option>
+							</select>
+							<br />
+							<label for="movepositionB" class="movepositionB">Move Position Plane B:</label>
+							<select id="movepositionB" name="movepositionB" required>
+								<option value="startnewgame" selected>Start new game</option>
+								<option value="1" {{.Disable11}}>1</option>
+								<option value="2" {{.Disable12}}>2</option>
+								<option value="3" {{.Disable13}}>3</option>
+								<option value="4" {{.Disable14}}>4</option>
+								<option value="5" {{.Disable15}}>5</option>
+								<option value="6" {{.Disable16}}>6</option>
+								<option value="7" {{.Disable17}}>7</option>
+								<option value="8" {{.Disable18}}>8</option>
+								<option value="9" {{.Disable19}}>9</option>
+							</select>
+							<br />
+							<label for="movepositionC" class="movepositionC">Move Position Plane C:</label>
+							<select id="movepositionC" name="movepositionC" required>
+								<option value="startnewgame" selected>Start new game</option>
+								<option value="1" {{.Disable21}}>1</option>
+								<option value="2" {{.Disable22}}>2</option>
+								<option value="3" {{.Disable23}}>3</option>
+								<option value="4" {{.Disable24}}>4</option>
+								<option value="5" {{.Disable25}}>5</option>
+								<option value="6" {{.Disable26}}>6</option>
+								<option value="7" {{.Disable27}}>7</option>
+								<option value="8" {{.Disable28}}>8</option>
+								<option value="9" {{.Disable29}}>9</option>
+							</select>
+						</div>
+						<br />
+						<input type="submit" value="Submit" />
+						<input type="text" size="100px" id="status" name="status" value="{{.Status}}" class="{{.GameResult}}" readonly />
+					</fieldset>
+				</form>
+			</div>
+		</div>
+	</body>
+</html>
