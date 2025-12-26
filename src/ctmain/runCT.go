@@ -25,10 +25,9 @@ import (
 const (
 	addr                   = "127.0.0.1:8080"      // http server listen address
 	fileComputedTomography = "templates/ct.html"   // html for computed tomography
-	patternCT              = "/computedCT"         // http handler computed tomography
+	patternCT              = "/computedtomography" // http handler computed tomography
 	xlabelsZoom            = 11                    // # labels on x axis in zoom
 	ylabelsZoom            = 11                    // # labels on y axis in zoom
-	xlabelsOverview        = 1                     // # labels on x axis in overview
 	ylabelsOverview        = 3                     // # labels on y axis in overview
 	geometricobject        = "geometricobject.txt" // 3D geometric object file containing the densities, 50x50x50
 	dataDir                = "data/"               // directory for player positions
@@ -42,10 +41,13 @@ const (
 
 // Type to contain all the HTML template actions
 type PlotT struct {
-	Grid   []string // plotting grid
-	Status string   // status of the plot
-	Xlabel []string // x-axis labels
-	Ylabel []string // y-axis labels
+	Grid            []string // plotting grid
+	Status          string   // status of the plot
+	Xlabel          []string // x-axis labels
+	Ylabel          []string // y-axis labels
+	XlabelContainer string   // x-axis labels
+	YlabelContainer string   // x-axis labels
+	Domain          string   // Overview or Zoom
 }
 
 // Type to hold computed tomography state
@@ -81,6 +83,13 @@ func init() {
 // Construct an instance containing state
 func newComputedTomography(r *http.Request, plot *PlotT, f *os.File) (*ComputedTomography, error) {
 
+	var (
+		planeStep   int
+		planeStarti int
+		planeStartj int
+		planeStartk int
+		err         error
+	)
 	densities := make([][][]byte, planeDim)
 	for i := range densities {
 		densities[i] = make([][]byte, planeDim)
@@ -90,43 +99,57 @@ func newComputedTomography(r *http.Request, plot *PlotT, f *os.File) (*ComputedT
 	}
 
 	// Get the planeStarti, planeStartj, planeStartk, planeStep from html form
-	txt := r.FormValue("planestarti")
-	planeStarti, err := strconv.Atoi(txt)
-	if err != nil {
-		fmt.Printf("Atoi for planeStarti error: %v\n", err.Error())
-		return nil, fmt.Errorf("enter plane start axis i")
-	}
+	txt := r.FormValue("planestep")
+	if len(txt) == 0 {
+		// assign defaults to plane parameters
+		planeStep = 4
+		planeStarti = 0
+		planeStartj = 0
+		planeStartk = 0
 
-	txt = r.FormValue("planestartj")
-	planeStartj, err := strconv.Atoi(txt)
-	if err != nil {
-		fmt.Printf("Atoi for planeStartj error: %v\n", err.Error())
-		return nil, fmt.Errorf("enter plane start axis j")
-	}
+	} else {
+		planeStep, err = strconv.Atoi(txt)
+		if err != nil {
+			fmt.Printf("Atoi for planeStep error: %v\n", err.Error())
+			return nil, fmt.Errorf("enter plane step")
+		}
 
-	txt = r.FormValue("planestartk")
-	planeStartk, err := strconv.Atoi(txt)
-	if err != nil {
-		fmt.Printf("Atoi for planeStartk error: %v\n", err.Error())
-		return nil, fmt.Errorf("enter plane start axis k")
-	}
+		txt = r.FormValue("planestarti")
+		planeStarti, err = strconv.Atoi(txt)
+		if err != nil {
+			fmt.Printf("Atoi for planeStarti error: %v\n", err.Error())
+			return nil, fmt.Errorf("enter plane start axis i")
+		}
 
-	txt = r.FormValue("planestep")
-	planeStep, err := strconv.Atoi(txt)
-	if err != nil {
-		fmt.Printf("Atoi for planeStep error: %v\n", err.Error())
-		return nil, fmt.Errorf("enter plane step")
+		txt = r.FormValue("planestartj")
+		planeStartj, err = strconv.Atoi(txt)
+		if err != nil {
+			fmt.Printf("Atoi for planeStartj error: %v\n", err.Error())
+			return nil, fmt.Errorf("enter plane start axis j")
+		}
+
+		txt = r.FormValue("planestartk")
+		planeStartk, err = strconv.Atoi(txt)
+		if err != nil {
+			fmt.Printf("Atoi for planeStartk error: %v\n", err.Error())
+			return nil, fmt.Errorf("enter plane start axis k")
+		}
 	}
 
 	// Read the geometric object file containing the densities
 	for i := range planeDim {
 		for j := range planeDim {
-			for k := range planeDim {
+			for k := range planeDim - 1 {
 				_, err := fmt.Fscanf(f, "%d", &densities[i][j][k])
 				if err != nil {
 					fmt.Printf("Fscanf for densities[%d][%d][%d] error: %v\n", i, j, k, err.Error())
 					return nil, fmt.Errorf("function Fscanf for densities[%d][%d][%d] error: %v", i, j, k, err.Error())
 				}
+			}
+			_, err := fmt.Fscanf(f, "%d\n", &densities[i][j][planeDim-1])
+			if err != nil {
+				fmt.Printf("Fscanf for densities[%d][%d] newline error: %v\n", i, j, err.Error())
+				return nil, fmt.Errorf("function Fscanf for densities[%d][%d] newline error: %v", i, j, err.Error())
 			}
 		}
 	}
@@ -146,9 +169,9 @@ func newComputedTomography(r *http.Request, plot *PlotT, f *os.File) (*ComputedT
 	// Used in zoom, not overview
 	ct.Endpoints = Endpoints{
 		xmin: 0,
-		xmax: planeDim - 1,
+		xmax: planeDim,
 		ymin: 0,
-		ymax: planeDim - 1,
+		ymax: planeDim,
 	}
 
 	return &ct, nil
@@ -160,7 +183,7 @@ func (ct *ComputedTomography) drawCrossedLines() {
 	// loop over 5 horizontal lines, make axis separation double thick
 	for y := 0; y < rows; y += planeDim {
 		for x := range cols {
-			row := rows - y
+			row := y
 			col := x
 			ct.plot.Grid[row*cols+col] = "online"
 		}
@@ -168,56 +191,40 @@ func (ct *ComputedTomography) drawCrossedLines() {
 	// draw separation between axes double thick
 	y := 100
 	for x := range cols {
-		row := rows - y
 		col := x
+		row := y - 1
 		ct.plot.Grid[row*cols+col] = "online"
-		row = rows - 2*y
+		row = 2*y - 1
+		ct.plot.Grid[row*cols+col] = "online"
+		row = y + 1
+		ct.plot.Grid[row*cols+col] = "online"
+		row = 2*y + 1
 		ct.plot.Grid[row*cols+col] = "online"
 	}
 
 	// loop over 5 vertical
 	for x := 0; x < cols; x += planeDim {
 		for y = range rows {
-			row := rows - y
 			col := x
+			row := y
 			ct.plot.Grid[row*cols+col] = "online"
 		}
 	}
 }
 
 // Axial planes overview
-func (ct *ComputedTomography) gridFillOverview(r *http.Request) error {
+func (ct *ComputedTomography) gridFillOverview() error {
 	ct.xmin = 0
 	ct.xmax = cols
 	ct.ymin = 0.0
 	ct.ymax = rows
 
-	txt := r.FormValue("planestep")
-	if len(txt) == 0 {
-		fmt.Printf("plane step length = 0")
-		return fmt.Errorf("enter plane step")
-	}
-	planeStep, err := strconv.Atoi(txt)
-	if err != nil {
-		fmt.Printf("plane step int conversion error: %v\n", err.Error())
-		return fmt.Errorf("plane step int conversion error: %v", err.Error())
-	}
 	/**************** axis i *******************/
 	planeCnt := 0
-	txt = r.FormValue("planestarti")
-	if len(txt) == 0 {
-		fmt.Printf("plane start axis i length = 0\n")
-		return fmt.Errorf("enter plane start for axis i")
-	}
-	planeStarti, err := strconv.Atoi(txt)
-	if err != nil {
-		fmt.Printf("plane start i int conversion error: %v\n", err.Error())
-		return fmt.Errorf("plane start i int conversion error: %v", err.Error())
-	}
-	planeStopi := min(planeDim, nplanes*planeStep+planeStarti)
+	planeStopi := min(planeDim, nplanes*ct.planeStep+ct.planeStarti)
 
 	// loop over the planes
-	for i := planeStarti; i < planeStopi; i += planeStep {
+	for i := ct.planeStarti; i < planeStopi; i += ct.planeStep {
 		ystart := axisDim - (planeCnt/nplanes2)*planeDim
 		xstart := (planeCnt % nplanes2) * planeDim
 		for j := 0; j < planeDim; j++ {
@@ -234,20 +241,10 @@ func (ct *ComputedTomography) gridFillOverview(r *http.Request) error {
 
 	/************* axis j *******************/
 	planeCnt = 0
-	txt = r.FormValue("planestartj")
-	if len(txt) == 0 {
-		fmt.Printf("plane start axis j length = 0\n")
-		return fmt.Errorf("enter plane start for axis j")
-	}
-	planeStartj, err := strconv.Atoi(txt)
-	if err != nil {
-		fmt.Printf("plane start j int conversion error: %v\n", err.Error())
-		return fmt.Errorf("plane start j int conversion error: %v", err.Error())
-	}
-	planeStopj := min(planeDim, nplanes*planeStep+planeStartj)
+	planeStopj := min(planeDim, nplanes*ct.planeStep+ct.planeStartj)
 
 	// loop over the planes
-	for j := planeStartj; j < planeStopj; j += planeStep {
+	for j := ct.planeStartj; j < planeStopj; j += ct.planeStep {
 		ystart := 2*axisDim - (planeCnt/nplanes2)*planeDim
 		xstart := (planeCnt % nplanes2) * planeDim
 		for i := 0; i < planeDim; i++ {
@@ -264,19 +261,9 @@ func (ct *ComputedTomography) gridFillOverview(r *http.Request) error {
 
 	/******************* axis k ***********************/
 	planeCnt = 0
-	txt = r.FormValue("planestartk")
-	if len(txt) == 0 {
-		fmt.Printf("plane start axis k length = 0\n")
-		return fmt.Errorf("enter plane start for axis k")
-	}
-	planeStartk, err := strconv.Atoi(txt)
-	if err != nil {
-		fmt.Printf("plane start k int conversion error: %v\n", err.Error())
-		return fmt.Errorf("plane start k int conversion error: %v", err.Error())
-	}
-	planeStopk := min(planeDim, nplanes*planeStep+planeStartk)
+	planeStopk := min(planeDim, nplanes*ct.planeStep+ct.planeStartk)
 	// loop over the planes
-	for k := planeStartk; k < planeStopk; k += planeStep {
+	for k := ct.planeStartk; k < planeStopk; k += ct.planeStep {
 		ystart := 3*axisDim - (planeCnt/nplanes2)*planeDim
 		xstart := (planeCnt % nplanes2) * planeDim
 		for i := 0; i < planeDim; i++ {
@@ -362,6 +349,25 @@ func (ct *ComputedTomography) gridFillZoom(zoomAxis string, zoomPlane int) error
 	return nil
 }
 
+// insertLabels inserts x- an y-axis labels in the plot
+func (ct *ComputedTomography) insertLabels() {
+	// Construct x-axis labels
+	incr := (ct.xmax - ct.xmin) / (xlabelsZoom - 1)
+	x := ct.xmin
+	for i := range ct.plot.Xlabel {
+		ct.plot.Xlabel[i] = strconv.Itoa(x)
+		x += incr
+	}
+
+	// Construct the y-axis labels
+	incr = (ct.ymax - ct.ymin) / (ylabelsZoom - 1)
+	y := ct.ymin
+	for i := range ct.plot.Ylabel {
+		ct.plot.Ylabel[i] = strconv.Itoa(y)
+		y += incr
+	}
+}
+
 // Expand a particular axial plane in the geometric object
 func (ct *ComputedTomography) processZoom(zoomAxis string, zoomPlane int) error {
 	ct.plot.Grid = make([]string, rows*cols)
@@ -374,39 +380,49 @@ func (ct *ComputedTomography) processZoom(zoomAxis string, zoomPlane int) error 
 		return fmt.Errorf("gridFillZoom() error: %v", err)
 	}
 
-	// Construct the y-axis labels
-	ct.plot.Ylabel = make([]string, ylabelsZoom)
-	y := []string{"C", "B", "A"}
-	for i := range ct.plot.Ylabel {
-		ct.plot.Ylabel[i] = y[i]
-	}
+	// insert x-labels and y-labels in PlotT
+	ct.insertLabels()
 
-	// Construct the x-axis labels
+	// different alignment
+	ct.plot.YlabelContainer = "ylabel-zoom"
+	ct.plot.XlabelContainer = "xlabel-zoom"
+
+	// plot type
+	ct.plot.Domain = fmt.Sprintf("CT Zoom, Axis=%s, Plane=%d", zoomAxis, zoomPlane)
+
 	return nil
 }
 
 // Show sequences of axial planes of the geometric object
-func (ct *ComputedTomography) processOverview(r *http.Request) error {
+func (ct *ComputedTomography) processOverview() error {
 	ct.plot.Grid = make([]string, rows*cols)
-	ct.plot.Xlabel = make([]string, xlabelsZoom)
-	ct.plot.Ylabel = make([]string, ylabelsZoom)
+	ct.plot.Xlabel = make([]string, 1)
+	ct.plot.Ylabel = make([]string, 3)
 
 	// Put axial planes in PlotT grid
-	err := ct.gridFillOverview(r)
+	err := ct.gridFillOverview()
 	if err != nil {
 		return fmt.Errorf("gridFillOverview() error: %v", err)
 	}
 
-	// Construct the y-axis labels
+	// Construct the y-axis labels, specify the axes
 	ct.plot.Ylabel = make([]string, ylabelsOverview)
 	y := []string{"k", "j", "i"}
 	for i := range ct.plot.Ylabel {
 		ct.plot.Ylabel[i] = y[i]
 	}
 
-	// Construct the x-axis labels
-	x := "Axial Planes"
-	ct.plot.Xlabel[0] = x
+	// different alighnment
+	ct.plot.YlabelContainer = "ylabel-overview"
+	ct.plot.XlabelContainer = "xlabel-overview"
+
+	// Construct the x-axis labels, just note planes
+	ct.plot.Xlabel[0] = "AxialPlanes"
+
+	// plot type
+	ct.plot.Domain = fmt.Sprintf("CT Axial Plane Overview, Plane Step = %d, Axis i start = %d, Axis j start = %d, Axis k start = %d",
+		ct.planeStep, ct.planeStarti, ct.planeStartj, ct.planeStartk)
+
 	return nil
 }
 
@@ -438,7 +454,7 @@ func handleComputedTomography(w http.ResponseWriter, r *http.Request) {
 	f, err := os.Open(filepath.Join(dataDir, geometricobject))
 	if err != nil {
 		fmt.Printf("Open file %s error: %v\n", geometricobject, err)
-		plot.Status = fmt.Sprintf("Open file %s error: %v", geometricobject, err.Error())
+		plot.Status = "Check New Geometric Object and select the geometric object"
 		// Write to HTTP using template and grid
 		if err := tmplComputedTomography.Execute(w, plot); err != nil {
 			log.Fatalf("Write to HTTP output using template with error: %v\n", err)
@@ -486,7 +502,7 @@ func handleComputedTomography(w http.ResponseWriter, r *http.Request) {
 		}
 		// show Overview of geometric object density
 	} else {
-		err := ct.processOverview(r)
+		err := ct.processOverview()
 		if err != nil {
 			fmt.Printf("processOverview error: %v\n", err.Error())
 			plot.Status = fmt.Sprintf("processOverview error: %v\n", err.Error())

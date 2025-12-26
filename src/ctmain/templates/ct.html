@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="eng">
 	<head>
-		<title>"Tic-Tac-Toe 3D"</title>
+		<title>"Computed Tomography"</title>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<style type="text/css">
@@ -13,20 +13,55 @@
 				text-align:left;
 				padding-right: 10px;
 			}
+
 			#outer-container {
 				display: flex;
 				flex-direction: row;
 			}
 
-			#ylabel-container {
+			#xlabel-zoom {
 				display: flex;
-				font-size: 24px;
-				font-weight: bolder;
-				flex-direction: column;
-				width:40px;
-				justify-content: space-evenly;
+				flex-direction: row;
+				width: 600px;
+				justify-content: space-between;
+				font-size: 10px;
 			}
-			
+
+			#xlabel-overview {
+				display: flex;
+				flex-direction: row;
+				width: 600px;
+				justify-content: center;
+				font-size: 20px;
+				font-weight: bolder;
+			}
+
+			#ylabel-zoom {
+				display: flex;
+				flex-direction: column-reverse;
+				width:40px;
+				justify-content: start;
+				font-size: 10px;
+			}
+
+			#ylabel-overview {
+				display: flex;
+				flex-direction: column-reverse;
+				width:40px;
+				justify-content: space-around;
+				font-weight: bolder;
+				font-size: 20px;
+			}
+
+			div.xlabel, div.ylabel {
+				font-family: Arial, Helvetica, sans-serif;
+			}
+
+			div.xlabel {
+				text-align: left;
+				flex: 0 0 60px;
+			}
+
 			div.ylabel {
 				text-align: right;
 				flex: 0 0 60px;
@@ -54,23 +89,44 @@
 				background-color: white;
 			}
 
-			div.grid > div.winloseline {
-				background-color: yellow;
-			}
 
 			div.grid > div.online {
 				background-color: black;
 			}
 
-			div.grid div.machine {
-				background-color: red;
-			}
-			div.grid div.user {
-				background-color: blue;
-			}
-
 			div.grid div.none {
 				background-color: white;
+			}
+
+			div.grid div.gs0 {
+				background-color: #fff;
+			}
+			div.grid div.gs1 {
+				background-color: #f8f8f8;
+			}
+			div.grid div.gs2 {
+				background-color: #f0f0f0;
+			}
+			div.grid div.gs3 {
+				background-color: #d0d0d0;
+			}
+			div.grid div.gs4 {
+				background-color: #a0a0a0;
+			}
+			div.grid div.gs5 {
+				background-color: #909090;
+			}
+			div.grid div.gs6 {
+				background-color: #707070;
+			}
+			div.grid div.gs7 {
+				background-color: #505050;
+			}
+			div.grid div.gs8 {
+				background-color: #303030;
+			}
+			div.grid div.gs9 {
+				background-color: #000;
 			}
 
 			#form {
@@ -88,32 +144,13 @@
 				max-width: 350px;
 			}
 
-			.gamewin {
-				background-color: blue;
-			}
-			.gamelose {
-				background-color: red;
-			}
-			.gamedraw {
-				background-color: yellow;
-			}
-			.gamecontinue {
-			 background-color: green;
-			}
-
-			span.userlegend {
-				background-color: blue;
-			}
-			span.machinelegend {
-				background-color: red;
-			}
-
 		</style>
 	</head>
 	<body>
-		<h3>Tic-Tac-Toe 3D</h3>
+		<h3>Computed Tomography</h3>
+		<p><b>{{.Domain}}</b></p>
 		<div id="outer-container">
-			<div id="ylabel-container">
+			<div id="{{.YlabelContainer}}">
 				{{range .Ylabel}}
 					<div class="ylabel">{{.}}</div>
 				{{end}}
@@ -124,96 +161,67 @@
 						<div class="{{.}}"></div>
 					{{end}}
 				</div>
-				<div id="xlabel-container">
+				<div id="{{.XlabelContainer}}">
 					{{range .Xlabel}}
 						<div class="xlabel">{{.}}</div>
 					{{end}}
 				</div>
 			</div>
 			<div id="form">
-				<form action="http://127.0.0.1:8080/tictactoe3D" method="post">
+				<form action="http://127.0.0.1:8080/computedtomography" method="post">
 					<fieldset>
-						<legend>Tic-Tac-Toe3D Parameters <span class="userlegend">user X</span> <span class="machinelegend">machine O</span></legend>
+						<legend>Computed Tomography Parameters</legend>
 						<p>	
-							Either select which orthogonal axis, i, j, or k to view or move to the next position
-							using the current viewing axis.
-							If moving to the next position, choose the plane and use the respective select list
-							to select the next move from the respective select list.  
-							Start new game with "Start new game" for each plane.
-                            Click <i>Submit</i> after each choice is made.  A 3-D plot of moves will be shown
-							in the current viewing axis.
+							For a <i>New Geometric Object</i> select the geometric object.  For Zoom select
+							the <i>Zoom Axis</i> and enter the <i>Zoom Plane</i> (0-49).  For overview of the plane tomography
+							enter the <i>Plane Step</i> (1-4) and starting planes for axes i, j, and k.
 					   </p>
 					   <div class="options">
 						    <div>
-								<input type="radio" name="viewmove" id="view" value="view" />
-								<label for="view">Change Axis Planes to View</label>
-								<input type="radio" name="viewmove" id="move" value="move" checked />
-								<label for="move">Move Position</label>
-								<hr />
-								View axis planes 
+								<input type="checkbox" name="newgeometric" id="newgeometric" value="newgeometric" />
+								<label for="newgeometric">New Geometric Object</label>
+								<input type="checkbox" name="zoom" id="zoom" value="zoomaxisplane" />
+								<label for="zoom">Zoom</label>
 								<br />
-								<input type="radio" name="axisplane" id="axisi" value="axisi" checked />
-								<label for="axisi">Axis i</label>
-								<input type="radio" name="axisplane" id="axisj" value="axisj" />
-								<label for="axisj">Axis j</label>
-								<input type="radio" name="axisplane" id="axisk" value="axisk" />
-								<label for="axisk">Axis k</label>
-								<hr />
-						        Select plane A, B, or C for next move position
-								<br />
-								<input type="radio" name="planeselect" id="planeA" value="planeA" checked/>
-								<label for="planeA">Plane A</label>
-								<input type="radio" name="planeselect" id="planeB" value="planeB" />
-								<label for="planeB">Plane B</label>
-								<input type="radio" name="planeselect" id="planeC"  value="planeC" />
-								<label for="planeC">Plane C</label>
-								<hr />
 							</div>
-							<label for="movepositionA" class="movepositionA">Move Position Plane A:</label>
-							<select id="movepositionA" name="movepositionA" required>
-								<option value="startnewgame" selected>Start new game</option>
-								<option value="1" {{.Disable1}}>1</option>
-								<option value="2" {{.Disable2}}>2</option>
-								<option value="3" {{.Disable3}}>3</option>
-								<option value="4" {{.Disable4}}>4</option>
-								<option value="5" {{.Disable5}}>5</option>
-								<option value="6" {{.Disable6}}>6</option>
-								<option value="7" {{.Disable7}}>7</option>
-								<option value="8" {{.Disable8}}>8</option>
-								<option value="9" {{.Disable9}}>9</option>
+							<label for="geometricobject">Geometric Object:</label>
+							<select id="geometricobject" name="geometricobject">
+								<option value="" selected>Enter new object</option>
+								<option value="ellipsoid">ellipsoid</option>
+								<option value="plane">plane</option>
+								<option value="paraboloid">paraboloid</option>
+								<option value="cube">cube</option>
+								<option value="cone">cone</option>
+								<option value="box">box</option>
 							</select>
 							<br />
-							<label for="movepositionB" class="movepositionB">Move Position Plane B:</label>
-							<select id="movepositionB" name="movepositionB" required>
-								<option value="startnewgame" selected>Start new game</option>
-								<option value="1" {{.Disable11}}>1</option>
-								<option value="2" {{.Disable12}}>2</option>
-								<option value="3" {{.Disable13}}>3</option>
-								<option value="4" {{.Disable14}}>4</option>
-								<option value="5" {{.Disable15}}>5</option>
-								<option value="6" {{.Disable16}}>6</option>
-								<option value="7" {{.Disable17}}>7</option>
-								<option value="8" {{.Disable18}}>8</option>
-								<option value="9" {{.Disable19}}>9</option>
+							<label for="zoomaxis">Zoom Axis:</label>
+							<select id="zoomaxis" name="zoomaxis">
+								<option value="" selected>Enter zoom axis</option>
+								<option value="i">Axis i</option>
+								<option value="j">Axis j</option>
+								<option value="k">Axis k</option>
 							</select>
 							<br />
-							<label for="movepositionC" class="movepositionC">Move Position Plane C:</label>
-							<select id="movepositionC" name="movepositionC" required>
-								<option value="startnewgame" selected>Start new game</option>
-								<option value="1" {{.Disable21}}>1</option>
-								<option value="2" {{.Disable22}}>2</option>
-								<option value="3" {{.Disable23}}>3</option>
-								<option value="4" {{.Disable24}}>4</option>
-								<option value="5" {{.Disable25}}>5</option>
-								<option value="6" {{.Disable26}}>6</option>
-								<option value="7" {{.Disable27}}>7</option>
-								<option value="8" {{.Disable28}}>8</option>
-								<option value="9" {{.Disable29}}>9</option>
-							</select>
+							<label for="zoomplane">Zoom Plane (0-49)</label>
+							<input type="number" id="zoomplane" name="zoomplane" min="0" max="49" />
+							<br />
+							<label for="planestep">Plane Step</label>
+							<input type="number" id="planestep" name="planestep" min="1" max="4" />
+							<br />
+							<label for="planestarti">Axis i start</label>
+							<input type="number" id="planestarti" name="planestarti" min="0" max="38" />
+							<br />
+							<label for="planestartj">Axis j start</label>
+							<input type="number" id="planestartj" name="planestartj" min="0" max="38" />
+							<br />
+							<label for="planestartk">Axis k start</label>
+							<input type="number" id="planestartk" name="planestartk" min="0" max="38" />
+							<br />
 						</div>
 						<br />
 						<input type="submit" value="Submit" />
-						<input type="text" size="100px" id="status" name="status" value="{{.Status}}" class="{{.GameResult}}" readonly />
+						<input type="text" size="100px" id="status" name="status" value="{{.Status}}" readonly />
 					</fieldset>
 				</form>
 			</div>
