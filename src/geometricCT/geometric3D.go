@@ -64,7 +64,7 @@ func (geo *GeoObject) createCube() {
 				delz := float64(z - z1)
 				sumsq := delx*delx + dely*dely + delz*delz
 				// center is the most dense, decreasing as you move away from center
-				geo.density[x][y][z] = byte(black * (1.0 - math.Sqrt(sumsq)/norm))
+				geo.density[x][y][z] = byte(black * (1.0 - math.Sqrt(sumsq/norm)))
 			}
 		}
 	}
@@ -120,18 +120,19 @@ func (geo *GeoObject) createEllipsoid() {
 // elliptic cone, surface
 func (geo *GeoObject) createCone() {
 	// center (x1,y1,z1)
-	// (x-x1)^2/a^2 + (y-y1)^2/b^2 = (z-z1)^2/c^2
+	// (x)^2/a^2 + (y)^2/b^2 = (z)^2/c^2
 	var black byte = 9
 	x1 := planeDim / 2
 	y1 := planeDim / 2
 	z1 := planeDim / 2
-	a := x1/2 - 4
-	b := y1/2 - 3
-	c := z1/2 + 3
-	for x := x1 - a; x < x1+a; x++ {
-		for y := y1 - b; y < y1+b; y++ {
-			z := int(math.Sqrt((float64(x*x)/float64(a*a)+float64(y*y)/float64(b*b))*float64(c*c))) + z1
-			geo.density[x][y][z] = black
+	a := x1 / 2
+	b := y1 / 2
+	c := z1
+	c2 := c / 2
+	for x := -a; x < a; x++ {
+		for y := -b; y < b; y++ {
+			z := int(math.Sqrt((float64(x*x)/float64(a*a) + float64(y*y)/float64(b*b)) * float64(c*c)))
+			geo.density[x1+x][y1+y][z+c2] = black
 		}
 	}
 }

@@ -396,7 +396,7 @@ func (ct *ComputedTomography) processZoom(zoomAxis string, zoomPlane int) error 
 // Show sequences of axial planes of the geometric object
 func (ct *ComputedTomography) processOverview() error {
 	ct.plot.Grid = make([]string, rows*cols)
-	ct.plot.Xlabel = make([]string, 1)
+	ct.plot.Xlabel = make([]string, 2)
 	ct.plot.Ylabel = make([]string, 3)
 
 	// Put axial planes in PlotT grid
@@ -417,7 +417,8 @@ func (ct *ComputedTomography) processOverview() error {
 	ct.plot.XlabelContainer = "xlabel-overview"
 
 	// Construct the x-axis labels, just note planes
-	ct.plot.Xlabel[0] = "AxialPlanes"
+	ct.plot.Xlabel[0] = "Axial"
+	ct.plot.Xlabel[1] = "Planes"
 
 	// plot type
 	ct.plot.Domain = fmt.Sprintf("CT Axial Plane Overview, Plane Step = %d, Axis i start = %d, Axis j start = %d, Axis k start = %d",
