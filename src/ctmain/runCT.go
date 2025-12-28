@@ -1,6 +1,6 @@
 /*
-Computed Tomography displays the internal structure of 3D geometric objects
-such as ellipsoids, parabloids, cubes, planes, or cones.  It slices the
+Geometric Tomography displays the internal structure of 3D geometric objects
+such as ellipsoids, parabloids, cubes, boxes, planes, or cones.  It slices the
 geometric objects along axial planes in the Cartesian coordinate system.
 The object can be solids as well as surfaces.
 It gives an overview of the planes in i, j, k axes along with the option
@@ -407,7 +407,7 @@ func (ct *ComputedTomography) processOverview() error {
 
 	// Construct the y-axis labels, specify the axes
 	ct.plot.Ylabel = make([]string, ylabelsOverview)
-	y := []string{"k", "j", "i"}
+	y := []string{"i", "j", "k"}
 	for i := range ct.plot.Ylabel {
 		ct.plot.Ylabel[i] = y[i]
 	}

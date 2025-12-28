@@ -128,11 +128,13 @@ func (geo *GeoObject) createCone() {
 	a := x1 / 2
 	b := y1 / 2
 	c := z1
-	c2 := c / 2
+	//z1c := z1 - c/2
+	z1c := z1 + c/2
 	for x := -a; x < a; x++ {
 		for y := -b; y < b; y++ {
 			z := int(math.Sqrt((float64(x*x)/float64(a*a) + float64(y*y)/float64(b*b)) * float64(c*c)))
-			geo.density[x1+x][y1+y][z+c2] = black
+			//geo.density[z1c+z][x1+x][y1+y] = black
+			geo.density[z1c-z][x1+x][y1+y] = black
 		}
 	}
 }
