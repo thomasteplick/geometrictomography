@@ -388,7 +388,7 @@ func (ct *ComputedTomography) processZoom(zoomAxis string, zoomPlane int) error 
 	ct.plot.XlabelContainer = "xlabel-zoom"
 
 	// plot type
-	ct.plot.Domain = fmt.Sprintf("CT Zoom, Axis=%s, Plane=%d", zoomAxis, zoomPlane)
+	ct.plot.Domain = fmt.Sprintf("Axial Plane Zoom, Axis=%s, Plane=%d", zoomAxis, zoomPlane)
 
 	return nil
 }
@@ -412,7 +412,7 @@ func (ct *ComputedTomography) processOverview() error {
 		ct.plot.Ylabel[i] = y[i]
 	}
 
-	// different alighnment
+	// different alignment
 	ct.plot.YlabelContainer = "ylabel-overview"
 	ct.plot.XlabelContainer = "xlabel-overview"
 
@@ -421,7 +421,7 @@ func (ct *ComputedTomography) processOverview() error {
 	ct.plot.Xlabel[1] = "Planes"
 
 	// plot type
-	ct.plot.Domain = fmt.Sprintf("CT Axial Plane Overview, Plane Step = %d, Axis i start = %d, Axis j start = %d, Axis k start = %d",
+	ct.plot.Domain = fmt.Sprintf("Axial Plane Overview, Plane Step = %d, Axis i start = %d, Axis j start = %d, Axis k start = %d",
 		ct.planeStep, ct.planeStarti, ct.planeStartj, ct.planeStartk)
 
 	return nil

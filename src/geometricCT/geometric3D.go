@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	planeDim        = 50                    // plane dimension in cells in i, j, k
+	planeDim        = 50                    // plane dimension in cells in i, j, k data space
 	geometricobject = "geometricobject.txt" // 3D geometric object file containing the densities, 50x50x50
 	dataDir         = "data/"               // directory for player positions
 )
@@ -29,11 +29,14 @@ func (geo *GeoObject) createPlane() {
 	// vary x, y, in (0, 49)
 	// Normal to plane is Ai + Bj + Ck
 	// dot product: A(x-x1) + B(y-y1) + C(z-z1) = 0
-	// Ax + By + Cz = D, let A=B=C=1, => D=x1+y1+z1
-	A := 1
-	B := 1
-	C := 1
-	D := 3 * planeDim
+	// Ax + By + Cz = D, => D=A*x1+B*y1+C*z1
+	x1 := planeDim / 2
+	y1 := planeDim / 2
+	z1 := planeDim / 2
+	A := 2
+	B := 3
+	C := 4
+	D := A*x1 + B*y1 + C*z1
 	var black byte = 9
 
 	for x := 0; x < planeDim; x++ {
@@ -101,18 +104,25 @@ func (geo *GeoObject) createBox() {
 // ellipsoid, surface
 func (geo *GeoObject) createEllipsoid() {
 	// center (x1,y1,z1)
-	// (x-x1)^2/a^2 + (y-y1)^2/b^2 + (z-z1)^2/c^2 = 1
+	// (x)^2/a^2 + (y)^2/b^2 + (z)^2/c^2 = 1
 	var black byte = 9
 	x1 := planeDim / 2
 	y1 := planeDim / 2
 	z1 := planeDim / 2
 	a := x1/2 - 3
+	a2 := a * a
 	b := y1 / 2
+	b2 := b * b
 	c := z1/2 + 2
-	for x := x1 - a; x < x1+a; x++ {
-		for y := y1 - b; y < y1+b; y++ {
-			z := int(math.Sqrt((1.0-float64(x*x)/float64(a*a)-float64(y*y)/float64(b*b))*float64(c*c))) + z1
-			geo.density[x][y][z] = black
+	c2 := c * c
+	for x := -a; x < a; x++ {
+		for y := -b; y < b; y++ {
+			tmp := 1.0 - float64(x*x)/float64(a2) - float64(y*y)/float64(b2)
+			if tmp > 0 {
+				z := int(math.Sqrt(tmp * float64(c2)))
+				geo.density[x+x1][y+y1][z1+z] = black
+				geo.density[x+x1][y+y1][z1-z] = black
+			}
 		}
 	}
 }
@@ -126,13 +136,16 @@ func (geo *GeoObject) createCone() {
 	y1 := planeDim / 2
 	z1 := planeDim / 2
 	a := x1 / 2
+	a2 := a * a
 	b := y1 / 2
+	b2 := b * b
 	c := z1
+	c2 := c * c
 	//z1c := z1 - c/2
 	z1c := z1 + c/2
 	for x := -a; x < a; x++ {
 		for y := -b; y < b; y++ {
-			z := int(math.Sqrt((float64(x*x)/float64(a*a) + float64(y*y)/float64(b*b)) * float64(c*c)))
+			z := int(math.Sqrt((float64(x*x)/float64(a2) + float64(y*y)/float64(b2)) * float64(c2)))
 			//geo.density[z1c+z][x1+x][y1+y] = black
 			geo.density[z1c-z][x1+x][y1+y] = black
 		}
@@ -142,18 +155,31 @@ func (geo *GeoObject) createCone() {
 // elliptic parabaloid, surface
 func (geo *GeoObject) createParaboloid() {
 	// center (x1,y1,z1)
-	// (x-x1)^2/a^2 + (y-y1)^2/b^2 = (z-z1)/c
+	// x1^2/a^2 + y^2/b^2 = z/c
 	var black byte = 9
 	x1 := planeDim / 2
 	y1 := planeDim / 2
 	z1 := planeDim / 2
-	a := x1/2 - 2
-	b := y1 / -4
-	c := z1/2 + 3
-	for x := x1 - a; x < x1+a; x++ {
-		for y := y1 - b; y < y1+b; y++ {
-			z := c*int(float64(x*x)/float64(a*a)+float64(y*y)/float64(b*b)) + z1
-			geo.density[x][y][z] = black
+	a := x1 / 2
+	a2 := a * a
+	b := y1 / 2
+	b2 := b * b
+	c := z1
+	z1c := z1 + c/2
+	//z1c := z1 - c/2
+
+	for x := -a; x < a; x++ {
+		for y := -b; y < b; y++ {
+			z := int((float64(x*x)/float64(a2) + float64(y*y)/float64(b2)) * float64(c))
+			if z1c >= z {
+				geo.density[z1c-z][x+x1][y+y1] = black
+			}
+			/*
+				if z1c+z < planeDim {
+					geo.density[z1c+z][x+x1][y+y1] = black
+				}
+			*/
+
 		}
 	}
 
@@ -185,7 +211,7 @@ func CreateObject(geometricObject string) error {
 	case "box":
 		geo.createBox()
 	default:
-		fmt.Printf("Unknown case %s\n", geometricObject)
+		fmt.Printf("create object unknown case: '%s'\n", geometricObject)
 		return fmt.Errorf("Unknown case %s", geometricObject)
 	}
 
