@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -37,6 +38,7 @@ const (
 	nplanes                = 12                    // number of planes per axis (2 rows) in overview
 	nplanes2               = nplanes / 2           // number of planes in each row in overview
 	axisDim                = 100                   // number of cells in each axis in y direction in overview
+	deg2rad                = math.Pi / 180.0       // convert degrees to radians
 )
 
 // Type to contain all the HTML template actions
@@ -427,6 +429,166 @@ func (ct *ComputedTomography) processOverview() error {
 	return nil
 }
 
+// Rotate axis planes
+func (ct *ComputedTomography) rotatePlanes(axis string, angle float64) error {
+	// create temporary storage for rotated plane densities
+	densityRotated := make([][]byte, planeDim)
+	for i := range densityRotated {
+		densityRotated[i] = make([]byte, planeDim)
+	}
+
+	// mean of the index
+	const u = float64(planeDim/2) - .5
+
+	// determine which axis i, j, or k
+	// loop over the planes in axis
+	// clear both locations for every plane
+	switch axis {
+	// axis i
+	case "i":
+		// loop over the planes
+		for plane := 0; plane < planeDim; plane++ {
+
+			// Clear the temporary storage for every plane rotation
+			for i := range densityRotated {
+				for j := range densityRotated[i] {
+					densityRotated[i][j] = 0
+				}
+			}
+
+			// rotate angle and store in temp storage
+			// remove the mean to rotate, put it back after
+			for yin := 0; yin < planeDim; yin++ {
+				for xin := 0; xin < planeDim; xin++ {
+					xrot := (float64(xin)-u)*math.Cos(angle) + (u-float64(yin))*math.Sin(angle)
+					yrot := -(float64(xin)-u)*math.Sin(angle) + (u-float64(yin))*math.Cos(angle)
+					ytranslated := yrot + u
+					xtranslated := xrot + u
+					if (ytranslated >= 0) && (ytranslated < planeDim) &&
+						(xtranslated >= 0) && (xtranslated < planeDim) {
+						densityRotated[byte(ytranslated)][byte(xtranslated)] = ct.density[plane][yin][xin]
+					}
+				}
+			}
+
+			// Clear this axis plane in ct.density before copying the rotated densities
+			for i := range ct.density[plane] {
+				for j := range ct.density[plane][i] {
+					ct.density[plane][i][j] = 0
+				}
+			}
+
+			// Copy the rotated densities to the cleared axis plane in ct.density
+			for i := range densityRotated {
+				copy(ct.density[plane][i], densityRotated[i])
+			}
+		}
+	// axis j
+	case "j":
+		// loop over the planes
+		for plane := 0; plane < planeDim; plane++ {
+
+			// Clear the temporary storage for every plane rotation
+			for i := range densityRotated {
+				for j := range densityRotated[i] {
+					densityRotated[i][j] = 0
+				}
+			}
+
+			// rotate angle and store in temp storage
+			// remove the mean to rotate, put it back after
+			for yin := 0; yin < planeDim; yin++ {
+				for xin := 0; xin < planeDim; xin++ {
+					xrot := (float64(xin)-u)*math.Cos(angle) + (u-float64(yin))*math.Sin(angle)
+					yrot := -(float64(xin)-u)*math.Sin(angle) + (u-float64(yin))*math.Cos(angle)
+					ytranslated := yrot + u
+					xtranslated := xrot + u
+					if (ytranslated >= 0) && (ytranslated < planeDim) &&
+						(xtranslated >= 0) && (xtranslated < planeDim) {
+						densityRotated[byte(ytranslated)][byte(xtranslated)] = ct.density[plane][yin][xin]
+					}
+				}
+			}
+
+			// Clear this axis plane in ct.density before copying the rotated densities
+			for i := range ct.density[plane] {
+				for j := range ct.density[plane][i] {
+					ct.density[i][plane][j] = 0
+				}
+			}
+
+			// Copy the rotated densities to the cleared axis plane in ct.density
+			for i := range densityRotated {
+				copy(ct.density[i][plane], densityRotated[i])
+			}
+		}
+	// axis k
+	case "k":
+		// loop over the planes
+		for plane := 0; plane < planeDim; plane++ {
+
+			// Clear the temporary storage for every plane rotation
+			for i := range densityRotated {
+				for j := range densityRotated[i] {
+					densityRotated[i][j] = 0
+				}
+			}
+
+			// rotate angle and store in temp storage
+			// remove the mean to rotate, put it back after
+			for yin := 0; yin < planeDim; yin++ {
+				for xin := 0; xin < planeDim; xin++ {
+					xrot := (float64(xin)-u)*math.Cos(angle) + (u-float64(yin))*math.Sin(angle)
+					yrot := -(float64(xin)-u)*math.Sin(angle) + (u-float64(yin))*math.Cos(angle)
+					ytranslated := yrot + u
+					xtranslated := xrot + u
+					if (ytranslated >= 0) && (ytranslated < planeDim) &&
+						(xtranslated >= 0) && (xtranslated < planeDim) {
+						densityRotated[byte(ytranslated)][byte(xtranslated)] = ct.density[plane][yin][xin]
+					}
+				}
+			}
+
+			// Clear this axis plane in ct.density before copying the rotated densities
+			for i := range ct.density[plane] {
+				for j := range ct.density[plane][i] {
+					ct.density[i][j][plane] = 0
+				}
+			}
+
+			// Copy the rotated densities to the cleared axis plane in ct.density
+			for i := range densityRotated {
+				for j := range densityRotated[i] {
+					ct.density[i][j][plane] = densityRotated[i][j]
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// Reload the geometric object
+func (ct *ComputedTomography) reloadGeometricObject(f *os.File) error {
+	// Read the geometric object file containing the densities
+	for i := range planeDim {
+		for j := range planeDim {
+			for k := range planeDim - 1 {
+				_, err := fmt.Fscanf(f, "%d", &ct.density[i][j][k])
+				if err != nil {
+					fmt.Printf("Fscanf for densities[%d][%d][%d] error: %v\n", i, j, k, err.Error())
+					return fmt.Errorf("function Fscanf for densities[%d][%d][%d] error: %v", i, j, k, err.Error())
+				}
+			}
+			_, err := fmt.Fscanf(f, "%d\n", &ct.density[i][j][planeDim-1])
+			if err != nil {
+				fmt.Printf("Fscanf for densities[%d][%d] newline error: %v\n", i, j, err.Error())
+				return fmt.Errorf("function Fscanf for densities[%d][%d] newline error: %v", i, j, err.Error())
+			}
+		}
+	}
+	return nil
+}
+
 // runs computed tomography on the geometric object
 func handleComputedTomography(w http.ResponseWriter, r *http.Request) {
 
@@ -474,6 +636,59 @@ func handleComputedTomography(w http.ResponseWriter, r *http.Request) {
 			log.Fatalf("Write to HTTP output using template with error: %v\n", err)
 		}
 		return
+	}
+
+	// Check for a reload of the geometric object
+	txt = r.FormValue("reset")
+	if txt == "resetgeometricobj" {
+		err = ct.reloadGeometricObject(f)
+		if err != nil {
+			fmt.Printf("resetGeometricObject error: %v\n", err.Error())
+			plot.Status = "Rotation angle conversion error"
+			// Write to HTTP using template and grid
+			if err := tmplComputedTomography.Execute(w, plot); err != nil {
+				log.Fatalf("Write to HTTP output using template with error: %v\n", err)
+			}
+			return
+		}
+	}
+
+	// Determine if rotate requested and perform the rotation of the axis planes
+	rotateRad := 0.0
+	rotate := r.FormValue("rotate")
+	if rotate == "rotateplanes" {
+		txt = r.FormValue("rotationangle")
+		rotateAngle, err := strconv.ParseFloat(txt, 64)
+		if err != nil {
+			fmt.Printf("Rotation angle %v conversion error: %v", rotateAngle, err)
+			plot.Status = "Rotation angle conversion error"
+			// Write to HTTP using template and grid
+			if err := tmplComputedTomography.Execute(w, plot); err != nil {
+				log.Fatalf("Write to HTTP output using template with error: %v\n", err)
+			}
+			return
+		} else {
+			rotateRad = deg2rad * rotateAngle
+		}
+		rotateAxis := r.FormValue("rotationaxis")
+		if len(txt) == 0 {
+			plot.Status = "Rotate axis not selected"
+			// Write to HTTP using template and grid
+			if err := tmplComputedTomography.Execute(w, plot); err != nil {
+				log.Fatalf("Write to HTTP output using template with error: %v\n", err)
+			}
+			return
+		} else {
+			err = ct.rotatePlanes(rotateAxis, rotateRad)
+			if err != nil {
+				plot.Status = "rotatePlanes error"
+				// Write to HTTP using template and grid
+				if err := tmplComputedTomography.Execute(w, plot); err != nil {
+					log.Fatalf("Write to HTTP output using template with error: %v\n", err)
+				}
+				return
+			}
+		}
 	}
 
 	// expand a plane for the geometric object

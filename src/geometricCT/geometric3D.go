@@ -118,10 +118,49 @@ func (geo *GeoObject) createEllipsoid() {
 	for x := -a; x < a; x++ {
 		for y := -b; y < b; y++ {
 			tmp := 1.0 - float64(x*x)/float64(a2) - float64(y*y)/float64(b2)
-			if tmp > 0 {
+			if tmp >= 0 {
 				z := int(math.Sqrt(tmp * float64(c2)))
 				geo.density[x+x1][y+y1][z1+z] = black
 				geo.density[x+x1][y+y1][z1-z] = black
+			}
+		}
+	}
+}
+
+// ellipsoid, solid
+func (geo *GeoObject) createEllipsoidSolid() {
+	// center (x1,y1,z1)
+	// (x)^2/a^2 + (y)^2/b^2 + (z)^2/c^2 = 1
+	black := 9.0
+	x1 := planeDim / 2
+	y1 := planeDim / 2
+	z1 := planeDim / 2
+	// assign axis maximums
+	a := x1/2 - 4
+	b := y1 / 2
+	c := z1/2 + 4
+	norm := float64(a*a + b*b + c*c)
+	var density byte
+	// Fill in the ellipsoid while any axis is greater than or equal to zero
+	for i := a; i >= 0; i-- {
+		a2 := i * i
+		for j := b; j >= 0; j-- {
+			b2 := j * j
+			for k := c; k >= 0; k-- {
+				c2 := k * k
+				for x := -i; x <= i; x++ {
+					for y := -j; y <= j; y++ {
+						tmp := 1.0 - float64(x*x)/float64(a2) - float64(y*y)/float64(b2)
+						if tmp >= 0 {
+							z := int(math.Sqrt(tmp * float64(c2)))
+							sumsq := float64(x*x + y*y + z*z)
+							// center is the most dense, decreasing as you move away from center
+							density = byte(black * (1.0 - math.Sqrt(sumsq/norm)))
+							geo.density[x+x1][y+y1][z1+z] = density
+							geo.density[x+x1][y+y1][z1-z] = density
+						}
+					}
+				}
 			}
 		}
 	}
@@ -202,8 +241,10 @@ func CreateObject(geometricObject string) error {
 		geo.createPlane()
 	case "cube":
 		geo.createCube()
-	case "ellipsoid":
+	case "ellipsoidsurface":
 		geo.createEllipsoid()
+	case "ellipsoidsolid":
+		geo.createEllipsoidSolid()
 	case "paraboloid":
 		geo.createParaboloid()
 	case "cone":
