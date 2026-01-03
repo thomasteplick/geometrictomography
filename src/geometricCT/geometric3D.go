@@ -115,13 +115,35 @@ func (geo *GeoObject) createEllipsoid() {
 	b2 := b * b
 	c := z1/2 + 2
 	c2 := c * c
-	for x := -a; x < a; x++ {
-		for y := -b; y < b; y++ {
+	for x := -a; x <= a; x++ {
+		for y := -b; y <= b; y++ {
 			tmp := 1.0 - float64(x*x)/float64(a2) - float64(y*y)/float64(b2)
 			if tmp >= 0 {
 				z := int(math.Sqrt(tmp * float64(c2)))
-				geo.density[x+x1][y+y1][z1+z] = black
-				geo.density[x+x1][y+y1][z1-z] = black
+				geo.density[x+x1][y+y1][z+z1] = black
+				geo.density[x+x1][y+y1][-z+z1] = black
+			}
+		}
+	}
+
+	for y := -b; y <= b; y++ {
+		for z := -c; z <= c; z++ {
+			tmp := 1.0 - float64(z*z)/float64(c2) - float64(y*y)/float64(b2)
+			if tmp >= 0 {
+				x := int(math.Sqrt(tmp * float64(a2)))
+				geo.density[x+x1][y+y1][z+z1] = black
+				geo.density[-x+x1][y+y1][z+z1] = black
+			}
+		}
+	}
+
+	for z := -c; z <= c; z++ {
+		for x := -a; x <= a; x++ {
+			tmp := 1.0 - float64(z*z)/float64(c2) - float64(x*x)/float64(a2)
+			if tmp >= 0 {
+				y := int(math.Sqrt(tmp * float64(b2)))
+				geo.density[x+x1][y+y1][z+z1] = black
+				geo.density[x+x1][-y+y1][z+z1] = black
 			}
 		}
 	}
@@ -180,13 +202,33 @@ func (geo *GeoObject) createCone() {
 	b2 := b * b
 	c := z1
 	c2 := c * c
-	//z1c := z1 - c/2
 	z1c := z1 + c/2
-	for x := -a; x < a; x++ {
-		for y := -b; y < b; y++ {
+	for x := -a; x <= a; x++ {
+		for y := -b; y <= b; y++ {
 			z := int(math.Sqrt((float64(x*x)/float64(a2) + float64(y*y)/float64(b2)) * float64(c2)))
-			//geo.density[z1c+z][x1+x][y1+y] = black
 			geo.density[z1c-z][x1+x][y1+y] = black
+		}
+	}
+
+	for y := -b; y <= b; y++ {
+		for z := 0; z <= c; z++ {
+			tmp := float64(z*z)/float64(c2) - float64(y*y)/float64(b2)
+			if tmp >= 0 {
+				x := int(math.Sqrt(tmp * float64(a2)))
+				geo.density[z1c-z][x1+x][y1+y] = black
+				geo.density[z1c-z][x1-x][y1+y] = black
+			}
+		}
+	}
+
+	for z := 0; z <= c; z++ {
+		for x := -a; x <= a; x++ {
+			tmp := float64(z*z)/float64(c2) - float64(x*x)/float64(a2)
+			if tmp >= 0 {
+				y := int(math.Sqrt(tmp * float64(b2)))
+				geo.density[z1c-z][x1+x][y1+y] = black
+				geo.density[z1c-z][x1+x][y1-y] = black
+			}
 		}
 	}
 }
@@ -205,23 +247,36 @@ func (geo *GeoObject) createParaboloid() {
 	b2 := b * b
 	c := z1
 	z1c := z1 + c/2
-	//z1c := z1 - c/2
-
 	for x := -a; x < a; x++ {
 		for y := -b; y < b; y++ {
 			z := int((float64(x*x)/float64(a2) + float64(y*y)/float64(b2)) * float64(c))
 			if z1c >= z {
 				geo.density[z1c-z][x+x1][y+y1] = black
 			}
-			/*
-				if z1c+z < planeDim {
-					geo.density[z1c+z][x+x1][y+y1] = black
-				}
-			*/
-
 		}
 	}
 
+	for y := -b; y < b; y++ {
+		for z := 0; z <= c; z++ {
+			tmp := float64(z)/float64(c) - float64(y*y)/float64(b2)
+			if tmp >= 0 {
+				x := int((math.Sqrt(tmp * float64(a2))))
+				geo.density[z1c-z][x1+x][y1+y] = black
+				geo.density[z1c-z][x1-x][y1+y] = black
+			}
+		}
+	}
+
+	for z := 0; z <= c; z++ {
+		for x := -a; x <= a; x++ {
+			tmp := float64(z)/float64(c) - float64(x*x)/float64(a2)
+			if tmp >= 0 {
+				y := int(math.Sqrt(tmp * float64(b2)))
+				geo.density[z1c-z][x1+x][y1+y] = black
+				geo.density[z1c-z][x1+x][y1-y] = black
+			}
+		}
+	}
 }
 
 // create a geometric 3D object using its densities
