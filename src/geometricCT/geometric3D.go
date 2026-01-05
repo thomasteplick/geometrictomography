@@ -149,7 +149,7 @@ func (geo *GeoObject) createEllipsoid() {
 	}
 }
 
-// ellipsoid, solid
+// ellipsoid, solid with varying density
 func (geo *GeoObject) createEllipsoidSolid() {
 	// center (x1,y1,z1)
 	// (x)^2/a^2 + (y)^2/b^2 + (z)^2/c^2 = 1
@@ -279,6 +279,53 @@ func (geo *GeoObject) createParaboloid() {
 	}
 }
 
+// create a solid paraboloid with varying density
+func (geo *GeoObject) createParaboloidSolid() {
+	// center (x1,y1,z1)
+	// x1^2/a^2 + y^2/b^2 = z/c
+	black := 9.0
+	x1 := planeDim / 2
+	y1 := planeDim / 2
+	z1 := planeDim / 2
+	// assign axis maximums
+	a := x1 / 2
+	b := y1 / 2
+	c := z1
+	norm := float64(a*a + b*b + (c/2)*(c/2))
+	var density byte
+	// Fill in the paraboloid while any axis is greater than or equal to zero
+	for i := a; i > 0; i-- {
+		a2 := i * i
+		for j := b; j > 0; j-- {
+			b2 := j * j
+			for k := c; k > 0; k-- {
+				c2 := k
+				z1c := z1 + k/2
+				for x := -i; x <= i; x++ {
+					for y := -j; y <= j; y++ {
+						z := int((float64(x*x)/float64(a2) + float64(y*y)/float64(b2)) * float64(c2))
+						if z >= 0 && z <= k {
+							sumsq := float64(x*x + y*y + (z-k/2)*(z-k/2))
+							// center is the most dense, decreasing as you move away from center
+							density = byte(black * (1.0 - math.Sqrt(sumsq/norm)))
+							geo.density[z1c-z][x+x1][y+y1] = density
+							//geo.density[z1c-z][x+x1][y+y1] = byte(black)
+						}
+					}
+				}
+			}
+		}
+	}
+	// Miscellaneous problems
+	for z := -c / 2; z <= c/2; z++ {
+		x := 0
+		y := 0
+		sumsq := float64(x*x + y*y + z*z)
+		density = byte(black * (1.0 - math.Sqrt(sumsq/norm)))
+		geo.density[z1+z][x+x1][y+y1] = density
+	}
+}
+
 // create a geometric 3D object using its densities
 func CreateObject(geometricObject string) error {
 	// create a GeoObject instance
@@ -302,6 +349,8 @@ func CreateObject(geometricObject string) error {
 		geo.createEllipsoidSolid()
 	case "paraboloid":
 		geo.createParaboloid()
+	case "paraboloidsolid":
+		geo.createParaboloidSolid()
 	case "cone":
 		geo.createCone()
 	case "box":
