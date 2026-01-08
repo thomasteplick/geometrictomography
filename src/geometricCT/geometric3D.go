@@ -291,6 +291,8 @@ func (geo *GeoObject) createParaboloidSolid() {
 	a := x1 / 2
 	b := y1 / 2
 	c := z1
+	//c12 := c / 2
+	z1c := z1 + c/2
 	norm := float64(a*a + b*b + (c/2)*(c/2))
 	var density byte
 
@@ -300,21 +302,16 @@ func (geo *GeoObject) createParaboloidSolid() {
 		a2 := i * i
 		for j := b; j > 0; j-- {
 			b2 := j * j
-			for x := -i; x <= i; x++ {
-				for y := -j; y <= j; y++ {
-					for k := c; k > 0; k-- {
-						c2 := k
-						z1c := z1 + k/2
-						z := int((float64(x*x)/float64(a2) + float64(y*y)/float64(b2)) * float64(c2))
+			for k := c; k > 0; k-- {
+				k12 := k / 2
+				for x := -i; x <= i; x++ {
+					for y := -j; y <= j; y++ {
+						z := int((float64(x*x)/float64(a2) + float64(y*y)/float64(b2)) * float64(k))
 						if z >= 0 && z <= k {
 							sumsq := float64(x*x + y*y + (z-k/2)*(z-k/2))
 							// center is the most dense, decreasing as you move away from center
 							density = byte(black * (1.0 - math.Sqrt(sumsq/norm)))
-							if density > byte(black) {
-								density = 0
-							}
-							geo.density[z1c-z][x+x1][y+y1] = density
-							//geo.density[z1c-z][x+x1][y+y1] = byte(black)
+							geo.density[z1-z+k12][x+x1][y+y1] = density
 						}
 					}
 				}
@@ -329,6 +326,19 @@ func (geo *GeoObject) createParaboloidSolid() {
 		sumsq := float64(x*x + y*y + z*z)
 		density = byte(black * (1.0 - math.Sqrt(sumsq/norm)))
 		geo.density[z1+z][x+x1][y+y1] = density
+	}
+
+	a2 := a * a
+	b2 := b * b
+	for z := 0; z < c; z++ {
+		for x := -x1; x < x1; x++ {
+			for y := -y1; y < y1; y++ {
+				test := (float64(x*x)/float64(a2) + float64(y*y)/float64(b2)) * float64(c)
+				if test > float64(z) {
+					geo.density[z1c-z][x1+x][y1+y] = 0
+				}
+			}
+		}
 	}
 }
 
