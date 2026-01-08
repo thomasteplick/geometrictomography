@@ -233,6 +233,69 @@ func (geo *GeoObject) createCone() {
 	}
 }
 
+// elliptic cone, solid
+func (geo *GeoObject) createConeSolid() {
+	// center (x1,y1,z1)
+	// (x)^2/a^2 + (y)^2/b^2 = (z)^2/c^2
+	var black = 9.0
+	x1 := planeDim / 2
+	y1 := planeDim / 2
+	z1 := planeDim / 2
+	a := x1 / 2
+	a2 := a * a
+	b := y1 / 2
+	b2 := b * b
+	c := z1
+	c2 := c * c
+	z1c := z1 + c/2
+	norm := float64(a*a + b*b + (c/2)*(c/2))
+	var density byte
+	/**************************************************************************/
+	// Fill in the cone while any axis is greater than or equal to zero
+	for i := a; i > 0; i-- {
+		a2 := i * i
+		for j := b; j > 0; j-- {
+			b2 := j * j
+			for k := c; k > 0; k-- {
+				k2 := k * k
+				k1c := z1 + k/2
+				for x := -i; x <= i; x++ {
+					for y := -j; y <= j; y++ {
+						z := int(math.Sqrt((float64(x*x)/float64(a2) + float64(y*y)/float64(b2)) * float64(k2)))
+						if z >= 0 && z <= k {
+							sumsq := float64(x*x + y*y + (z-k/2)*(z-k/2))
+							// center is the most dense, decreasing as you move away from center
+							density = byte(black * (1.0 - math.Sqrt(sumsq/norm)))
+							geo.density[k1c-z][x+x1][y+y1] = density
+						}
+					}
+				}
+			}
+		}
+	}
+
+	//Miscellaneous problems
+	for z := -c / 2; z <= c/2; z++ {
+		x := 0
+		y := 0
+		sumsq := float64(x*x + y*y + z*z)
+		density = byte(black * (1.0 - math.Sqrt(sumsq/norm)))
+		geo.density[z1+z][x+x1][y+y1] = density
+	}
+
+	for z := 0; z < c; z++ {
+		for x := -x1; x < x1; x++ {
+			for y := -y1; y < y1; y++ {
+				test := math.Sqrt((float64(x*x)/float64(a2) + float64(y*y)/float64(b2)) * float64(c2))
+				if test > float64(z) {
+					geo.density[z1c-z][x1+x][y1+y] = 0
+				}
+			}
+		}
+	}
+
+}
+
 // elliptic parabaloid, surface
 func (geo *GeoObject) createParaboloid() {
 	// center (x1,y1,z1)
@@ -303,7 +366,7 @@ func (geo *GeoObject) createParaboloidSolid() {
 		for j := b; j > 0; j-- {
 			b2 := j * j
 			for k := c; k > 0; k-- {
-				k12 := k / 2
+				k1c := z1 + k/2
 				for x := -i; x <= i; x++ {
 					for y := -j; y <= j; y++ {
 						z := int((float64(x*x)/float64(a2) + float64(y*y)/float64(b2)) * float64(k))
@@ -311,7 +374,7 @@ func (geo *GeoObject) createParaboloidSolid() {
 							sumsq := float64(x*x + y*y + (z-k/2)*(z-k/2))
 							// center is the most dense, decreasing as you move away from center
 							density = byte(black * (1.0 - math.Sqrt(sumsq/norm)))
-							geo.density[z1-z+k12][x+x1][y+y1] = density
+							geo.density[k1c-z][x+x1][y+y1] = density
 						}
 					}
 				}
@@ -369,11 +432,13 @@ func CreateObject(geometricObject string) error {
 		geo.createParaboloidSolid()
 	case "cone":
 		geo.createCone()
+	case "conesolid":
+		geo.createConeSolid()
 	case "box":
 		geo.createBox()
 	default:
-		fmt.Printf("create object unknown case: '%s'\n", geometricObject)
-		return fmt.Errorf("Unknown case %s", geometricObject)
+		fmt.Printf("create geometric object unknown case: '%s'\n", geometricObject)
+		return fmt.Errorf("create geometric object unknown case %s", geometricObject)
 	}
 
 	// Save geometric object

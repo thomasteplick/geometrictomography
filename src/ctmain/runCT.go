@@ -570,6 +570,7 @@ func (ct *ComputedTomography) rotatePlanes(axis string, angle float64) error {
 // Reload the geometric object
 func (ct *ComputedTomography) reloadGeometricObject(f *os.File) error {
 	// Read the geometric object file containing the densities
+
 	for i := range planeDim {
 		for j := range planeDim {
 			for k := range planeDim - 1 {
@@ -586,6 +587,7 @@ func (ct *ComputedTomography) reloadGeometricObject(f *os.File) error {
 			}
 		}
 	}
+
 	return nil
 }
 
