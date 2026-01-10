@@ -68,7 +68,7 @@ func (geo *GeoObject) createHyperbolicParaboloid() {
 		for y := -b; y <= b; y++ {
 			z := int((float64(y*y)/float64(b2) - float64(x*x)/float64(a2)) * float64(c))
 			if z >= -z1 && z <= z1 {
-				geo.density[z1+z][x+x1][y+y1] = black
+				geo.density[z1+z][x1+x][y1+y] = black
 			}
 		}
 	}
