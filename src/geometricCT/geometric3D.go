@@ -1,6 +1,8 @@
 /*
 Create geometric object densities for paraboloid, ellipsoid,
-plane, cone, box, and cube.  These can be surfaces or solids.
+hyperbolic paraboloid, plane, cone, box, and cube.
+These can be surfaces or solids, depending on whether the
+volume is convex.
 */
 
 package geometricCT
@@ -67,7 +69,6 @@ func (geo *GeoObject) createHyperbolicParaboloid() {
 			z := int((float64(y*y)/float64(b2) - float64(x*x)/float64(a2)) * float64(c))
 			if z >= -z1 && z <= z1 {
 				geo.density[z1+z][x+x1][y+y1] = black
-				//geo.density[z1-z][x+x1][y+y1] = black
 			}
 		}
 	}
@@ -78,7 +79,6 @@ func (geo *GeoObject) createHyperbolicParaboloid() {
 			if tmp >= 0 {
 				x := int((math.Sqrt(tmp * float64(a2))))
 				geo.density[z1+z][x1+x][y1+y] = black
-				//geo.density[z1+z][x1-x][y1+y] = black
 			}
 		}
 	}
@@ -89,7 +89,6 @@ func (geo *GeoObject) createHyperbolicParaboloid() {
 			if tmp >= 0 {
 				y := int(math.Sqrt(tmp * float64(b2)))
 				geo.density[z1+z][x1+x][y1+y] = black
-				//geo.density[z1+z][x1+x][y1-y] = black
 			}
 		}
 	}
@@ -126,20 +125,20 @@ func (geo *GeoObject) createBox() {
 	y1 := planeDim / 2
 	z1 := planeDim / 2
 	del := planeDim / 4
-	for x := x1 - del; x < x1+del; x++ {
-		for y := y1 - del; y < y1+del; y++ {
+	for x := x1 - del; x <= x1+del; x++ {
+		for y := y1 - del; y <= y1+del; y++ {
 			geo.density[x][y][z1-del] = black
 			geo.density[x][y][z1+del] = black
 		}
 	}
-	for y := y1 - del; y < y1+del; y++ {
-		for z := z1 - del; z < z1+del; z++ {
+	for y := y1 - del; y <= y1+del; y++ {
+		for z := z1 - del; z <= z1+del; z++ {
 			geo.density[x1-del][y][z] = black
 			geo.density[x1+del][y][z] = black
 		}
 	}
-	for x := x1 - del; x < x1+del; x++ {
-		for z := z1 - del; z < z1+del; z++ {
+	for x := x1 - del; x <= x1+del; x++ {
+		for z := z1 - del; z <= z1+del; z++ {
 			geo.density[x][y1-del][z] = black
 			geo.density[x][y1+del][z] = black
 		}
