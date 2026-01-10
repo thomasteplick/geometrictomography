@@ -50,6 +50,51 @@ func (geo *GeoObject) createPlane() {
 	}
 }
 
+// hyperbolic paraboloid, surface
+func (geo *GeoObject) createHyperbolicParaboloid() {
+	// y^2/b^2 - x^2/a^2 = z/c
+	var black byte = 9
+	x1 := planeDim / 2
+	y1 := planeDim / 2
+	z1 := planeDim / 2
+	a := x1 / 2
+	a2 := a * a
+	b := y1 / 2
+	b2 := b * b
+	c := z1 / 2
+	for x := -a; x <= a; x++ {
+		for y := -b; y <= b; y++ {
+			z := int((float64(y*y)/float64(b2) - float64(x*x)/float64(a2)) * float64(c))
+			if z >= -z1 && z <= z1 {
+				geo.density[z1+z][x+x1][y+y1] = black
+				//geo.density[z1-z][x+x1][y+y1] = black
+			}
+		}
+	}
+
+	for y := -b; y <= b; y++ {
+		for z := -c; z <= c; z++ {
+			tmp := float64(y*y)/float64(b2) - float64(z)/float64(c)
+			if tmp >= 0 {
+				x := int((math.Sqrt(tmp * float64(a2))))
+				geo.density[z1+z][x1+x][y1+y] = black
+				//geo.density[z1+z][x1-x][y1+y] = black
+			}
+		}
+	}
+
+	for z := -c; z <= c; z++ {
+		for x := -a; x <= a; x++ {
+			tmp := float64(z)/float64(c) + float64(x*x)/float64(a2)
+			if tmp >= 0 {
+				y := int(math.Sqrt(tmp * float64(b2)))
+				geo.density[z1+z][x1+x][y1+y] = black
+				//geo.density[z1+z][x1+x][y1-y] = black
+			}
+		}
+	}
+}
+
 // cube, solid with decreasing density from center
 func (geo *GeoObject) createCube() {
 	black := 9.0
@@ -436,6 +481,8 @@ func CreateObject(geometricObject string) error {
 		geo.createConeSolid()
 	case "box":
 		geo.createBox()
+	case "hyperbolicparaboloid":
+		geo.createHyperbolicParaboloid()
 	default:
 		fmt.Printf("create geometric object unknown case: '%s'\n", geometricObject)
 		return fmt.Errorf("create geometric object unknown case %s", geometricObject)

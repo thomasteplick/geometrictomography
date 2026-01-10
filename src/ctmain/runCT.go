@@ -13,6 +13,7 @@ package main
 import (
 	"fmt"
 	"html/template"
+	"io"
 	"log"
 	"math"
 	"net/http"
@@ -479,8 +480,21 @@ func (ct *ComputedTomography) rotatePlanes(axis string, angle float64) error {
 			}
 
 			// Copy the rotated densities to the cleared axis plane in ct.density
-			for i := range densityRotated {
-				copy(ct.density[plane][i], densityRotated[i])
+			// Filter the rotated density with neighbor average using 3x3 kernel
+			var sum byte = 0
+			for i := 1; i < planeDim-1; i++ {
+				for j := 1; j < planeDim-1; j++ {
+					ct.density[plane][i][j] = densityRotated[i][j]
+					if densityRotated[i][j] == 0 {
+						sum = 0
+						for m := i - 1; m <= i+1; m++ {
+							for n := j - 1; n <= j+1; n++ {
+								sum += densityRotated[m][n]
+							}
+						}
+						ct.density[plane][i][j] = sum / 8
+					}
+				}
 			}
 		}
 	// axis j
@@ -505,7 +519,7 @@ func (ct *ComputedTomography) rotatePlanes(axis string, angle float64) error {
 					xtranslated := xrot + u
 					if (ytranslated >= 0) && (ytranslated < planeDim) &&
 						(xtranslated >= 0) && (xtranslated < planeDim) {
-						densityRotated[byte(ytranslated)][byte(xtranslated)] = ct.density[plane][yin][xin]
+						densityRotated[byte(ytranslated)][byte(xtranslated)] = ct.density[yin][plane][xin]
 					}
 				}
 			}
@@ -518,8 +532,21 @@ func (ct *ComputedTomography) rotatePlanes(axis string, angle float64) error {
 			}
 
 			// Copy the rotated densities to the cleared axis plane in ct.density
-			for i := range densityRotated {
-				copy(ct.density[i][plane], densityRotated[i])
+			// Filter the rotated density with neighbor average using 3x3 kernel
+			var sum byte = 0
+			for i := 1; i < planeDim-1; i++ {
+				for j := 1; j < planeDim-1; j++ {
+					ct.density[i][plane][j] = densityRotated[i][j]
+					if densityRotated[i][j] == 0 {
+						sum = 0
+						for m := i - 1; m <= i+1; m++ {
+							for n := j - 1; n <= j+1; n++ {
+								sum += densityRotated[m][n]
+							}
+						}
+						ct.density[i][plane][j] = sum / 8
+					}
+				}
 			}
 		}
 	// axis k
@@ -544,7 +571,7 @@ func (ct *ComputedTomography) rotatePlanes(axis string, angle float64) error {
 					xtranslated := xrot + u
 					if (ytranslated >= 0) && (ytranslated < planeDim) &&
 						(xtranslated >= 0) && (xtranslated < planeDim) {
-						densityRotated[byte(ytranslated)][byte(xtranslated)] = ct.density[plane][yin][xin]
+						densityRotated[byte(ytranslated)][byte(xtranslated)] = ct.density[yin][xin][plane]
 					}
 				}
 			}
@@ -557,9 +584,20 @@ func (ct *ComputedTomography) rotatePlanes(axis string, angle float64) error {
 			}
 
 			// Copy the rotated densities to the cleared axis plane in ct.density
-			for i := range densityRotated {
-				for j := range densityRotated[i] {
+			// Filter the rotated density with neighbor average using 3x3 kernel
+			var sum byte = 0
+			for i := 1; i < planeDim-1; i++ {
+				for j := 1; j < planeDim-1; j++ {
 					ct.density[i][j][plane] = densityRotated[i][j]
+					if densityRotated[i][j] == 0 {
+						sum = 0
+						for m := i - 1; m <= i+1; m++ {
+							for n := j - 1; n <= j+1; n++ {
+								sum += densityRotated[m][n]
+							}
+						}
+						ct.density[i][j][plane] = sum / 8
+					}
 				}
 			}
 		}
@@ -570,7 +608,8 @@ func (ct *ComputedTomography) rotatePlanes(axis string, angle float64) error {
 // Reload the geometric object
 func (ct *ComputedTomography) reloadGeometricObject(f *os.File) error {
 	// Read the geometric object file containing the densities
-
+	// reset the file descriptor to start
+	f.Seek(0, io.SeekStart)
 	for i := range planeDim {
 		for j := range planeDim {
 			for k := range planeDim - 1 {
