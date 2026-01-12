@@ -63,6 +63,8 @@ type ComputedTomography struct {
 	planeStep   int // overiew plane step size
 	Endpoints
 	density2grayscale [10]string
+	rotateAxis        string
+	rotateAngle       float64
 }
 
 // Type to hold the minimum and maximum data values of the MSE in the Learning Curve
@@ -164,6 +166,8 @@ func newComputedTomography(r *http.Request, plot *PlotT, f *os.File) (*ComputedT
 		planeStartk: planeStartk,
 		planeStep:   planeStep,
 		density:     densities,
+		rotateAngle: 0,
+		rotateAxis:  "",
 	}
 	// Create density2grayscale map
 	ct.density2grayscale = [10]string{"gs0", "gs1", "gs2", "gs3", "gs4",
@@ -391,7 +395,12 @@ func (ct *ComputedTomography) processZoom(zoomAxis string, zoomPlane int) error 
 	ct.plot.XlabelContainer = "xlabel-zoom"
 
 	// plot type
-	ct.plot.Domain = fmt.Sprintf("Axial Plane Zoom, Axis=%s, Plane=%d", zoomAxis, zoomPlane)
+	if ct.rotateAngle == 0 {
+		ct.plot.Domain = fmt.Sprintf("Axial Plane Zoom, Axis=%s, Plane=%d", zoomAxis, zoomPlane)
+	} else {
+		ct.plot.Domain = fmt.Sprintf("Axial Plane Zoom, Axis=%s, Plane=%d, Rotate Axis=%s, Rotate Angle=%.0f",
+			zoomAxis, zoomPlane, ct.rotateAxis, ct.rotateAngle)
+	}
 
 	return nil
 }
@@ -424,8 +433,13 @@ func (ct *ComputedTomography) processOverview() error {
 	ct.plot.Xlabel[1] = "Planes"
 
 	// plot type
-	ct.plot.Domain = fmt.Sprintf("Axial Plane Overview, Plane Step = %d, Axis i start = %d, Axis j start = %d, Axis k start = %d",
-		ct.planeStep, ct.planeStarti, ct.planeStartj, ct.planeStartk)
+	if ct.rotateAngle == 0 {
+		ct.plot.Domain = fmt.Sprintf("Axial Plane Overview, Plane Step = %d, Axis i start = %d, Axis j start = %d, Axis k start = %d",
+			ct.planeStep, ct.planeStarti, ct.planeStartj, ct.planeStartk)
+	} else {
+		ct.plot.Domain = fmt.Sprintf("Axial Plane Overview, Plane Step = %d, Axis i start = %d, Axis j start = %d, Axis k start = %d, "+
+			"Rotate Axis=%s, Rotate Angle=%.0f", ct.planeStep, ct.planeStarti, ct.planeStartj, ct.planeStartk, ct.rotateAxis, ct.rotateAngle)
+	}
 
 	return nil
 }
@@ -463,8 +477,8 @@ func (ct *ComputedTomography) rotatePlanes(axis string, angle float64) error {
 				for xin := 0; xin < planeDim; xin++ {
 					xrot := (float64(xin)-u)*math.Cos(angle) + (u-float64(yin))*math.Sin(angle)
 					yrot := -(float64(xin)-u)*math.Sin(angle) + (u-float64(yin))*math.Cos(angle)
-					ytranslated := yrot + u
-					xtranslated := xrot + u
+					ytranslated := -yrot + u
+					xtranslated := -xrot + u
 					if (ytranslated >= 0) && (ytranslated < planeDim) &&
 						(xtranslated >= 0) && (xtranslated < planeDim) {
 						densityRotated[byte(ytranslated)][byte(xtranslated)] = ct.density[plane][yin][xin]
@@ -515,8 +529,8 @@ func (ct *ComputedTomography) rotatePlanes(axis string, angle float64) error {
 				for xin := 0; xin < planeDim; xin++ {
 					xrot := (float64(xin)-u)*math.Cos(angle) + (u-float64(yin))*math.Sin(angle)
 					yrot := -(float64(xin)-u)*math.Sin(angle) + (u-float64(yin))*math.Cos(angle)
-					ytranslated := yrot + u
-					xtranslated := xrot + u
+					ytranslated := -yrot + u
+					xtranslated := -xrot + u
 					if (ytranslated >= 0) && (ytranslated < planeDim) &&
 						(xtranslated >= 0) && (xtranslated < planeDim) {
 						densityRotated[byte(ytranslated)][byte(xtranslated)] = ct.density[yin][plane][xin]
@@ -567,8 +581,8 @@ func (ct *ComputedTomography) rotatePlanes(axis string, angle float64) error {
 				for xin := 0; xin < planeDim; xin++ {
 					xrot := (float64(xin)-u)*math.Cos(angle) + (u-float64(yin))*math.Sin(angle)
 					yrot := -(float64(xin)-u)*math.Sin(angle) + (u-float64(yin))*math.Cos(angle)
-					ytranslated := yrot + u
-					xtranslated := xrot + u
+					ytranslated := -yrot + u
+					xtranslated := -xrot + u
 					if (ytranslated >= 0) && (ytranslated < planeDim) &&
 						(xtranslated >= 0) && (xtranslated < planeDim) {
 						densityRotated[byte(ytranslated)][byte(xtranslated)] = ct.density[yin][xin][plane]
@@ -699,19 +713,19 @@ func handleComputedTomography(w http.ResponseWriter, r *http.Request) {
 	rotate := r.FormValue("rotate")
 	if rotate == "rotateplanes" {
 		txt = r.FormValue("rotationangle")
-		rotateAngle, err := strconv.ParseFloat(txt, 64)
+		ct.rotateAngle, err = strconv.ParseFloat(txt, 64)
 		if err != nil {
-			fmt.Printf("Rotation angle %v conversion error: %v", rotateAngle, err)
-			plot.Status = "Rotation angle conversion error"
+			fmt.Printf("Rotation angle conversion error: %v", err)
+			plot.Status = fmt.Sprintf("Rotation angle conversion error: %v", err.Error())
 			// Write to HTTP using template and grid
 			if err := tmplComputedTomography.Execute(w, plot); err != nil {
 				log.Fatalf("Write to HTTP output using template with error: %v\n", err)
 			}
 			return
 		} else {
-			rotateRad = deg2rad * rotateAngle
+			rotateRad = deg2rad * ct.rotateAngle
 		}
-		rotateAxis := r.FormValue("rotationaxis")
+		ct.rotateAxis = r.FormValue("rotationaxis")
 		if len(txt) == 0 {
 			plot.Status = "Rotate axis not selected"
 			// Write to HTTP using template and grid
@@ -720,7 +734,7 @@ func handleComputedTomography(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		} else {
-			err = ct.rotatePlanes(rotateAxis, rotateRad)
+			err = ct.rotatePlanes(ct.rotateAxis, rotateRad)
 			if err != nil {
 				plot.Status = "rotatePlanes error"
 				// Write to HTTP using template and grid
