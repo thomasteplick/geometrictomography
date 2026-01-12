@@ -13,8 +13,14 @@ object can be rotated about any of the (i,j,k) axes for angles(+/-) 180 deg. In 
 plane for each axis and the plane step size can be chosen to view different parts of the geometric object.
 </p>
 <h4>Plane Tomogram Overview of Ellipsoid solid</h4>
+<img width="982" height="709" alt="image" src="https://github.com/user-attachments/assets/b693c4f2-00e6-4110-84ca-839bfab9539e" />
 <h4>Plane Zoom of Ellipsoid solid for dimension i and plane 25</h4>
+<img width="937" height="709" alt="image" src="https://github.com/user-attachments/assets/b0a9f691-f522-49ab-9ecc-f3d305380e88" />
 <h4>Plane Tomogram Overview of Paraboloid surface</h4>
+<img width="932" height="715" alt="image" src="https://github.com/user-attachments/assets/71383104-a82f-4020-9bf3-d1cc086a714f" />
 <h4>Plane Zoom of Paraboloid surface for dimension k and plane 25</h4>
-<h4>Plane Rotation of 45 degrees for Cone surface</h4>
+<img width="1117" height="716" alt="image" src="https://github.com/user-attachments/assets/d1599ff8-3789-4e26-93b7-1bebf43901a4" />
+<h4>Plane Overview for Rotation of 45 degrees for Cone surface</h4>
+<img width="993" height="715" alt="image" src="https://github.com/user-attachments/assets/abbadd14-8eab-4523-aac3-c91163f0cd32" />
 <h4>Plane Tomogram Overview of Hyperbolic Paraboloid surface</h4>
+<img width="983" height="721" alt="image" src="https://github.com/user-attachments/assets/94b78fec-d03e-4bca-bfdd-9004d077a58a" />
