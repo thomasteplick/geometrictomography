@@ -1,6 +1,6 @@
 /*
 Create geometric object densities for paraboloid, ellipsoid,
-hyperbolic paraboloid, plane, cone, box, and cube.
+hyperbolic paraboloid, plane, cone, box, cylinder, and cube.
 These can be surfaces or solids, depending on whether the
 volume is convex.
 */
@@ -47,6 +47,67 @@ func (geo *GeoObject) createPlane() {
 			// this point is inside the data space and in the plane
 			if z >= 0 && z < planeDim {
 				geo.density[x][y][z] = black
+			}
+		}
+	}
+}
+
+// elliptic cylinder, surface
+func (geo *GeoObject) createCylinder() {
+	// center (x1,y1,z1)
+	// (x)^2/a^2 + (y)^2/b^2 = 1
+	var black byte = 9
+	eps := .1
+	x1 := planeDim / 2
+	y1 := planeDim / 2
+	z1 := planeDim / 2
+	a := x1/2 - 3
+	a2 := a * a
+	b := y1/2 + 3
+	b2 := b * b
+	c := z1 / 2
+	for x := -a; x <= a; x++ {
+		for y := -b; y <= b; y++ {
+			diff := 1.0 - float64(x*x)/float64(a2) - float64(y*y)/float64(b2)
+			if diff > -eps && diff < eps {
+				for z := -c; z <= c; z++ {
+					geo.density[x+x1][y+y1][z+z1] = black
+				}
+			}
+		}
+	}
+}
+
+// elliptic cylinder, solid
+func (geo *GeoObject) createCylinderSolid() {
+	// center (x1,y1,z1)
+	// (x)^2/a^2 + (y)^2/b^2 = 1
+	black := 9.0
+	x1 := planeDim / 2
+	y1 := planeDim / 2
+	z1 := planeDim / 2
+	a := x1/2 - 3
+	b := y1/2 + 3
+	c := z1 / 2
+	var density byte
+	norm := float64(a*a + b*b + c*c)
+	// Fill in the ellipsoid while any axis is greater than or equal to zero
+	for i := a; i >= 0; i-- {
+		a2 := i * i
+		for j := b; j >= 0; j-- {
+			b2 := j * j
+			for x := -i; x <= i; x++ {
+				for y := -j; y <= j; y++ {
+					diff := 1.0 - float64(x*x)/float64(a2) - float64(y*y)/float64(b2)
+					if diff >= 0 {
+						for z := -c; z <= c; z++ {
+							sumsq := float64(x*x + y*y + z*z)
+							// center is the most dense, decreasing as you move away from center
+							density = byte(black * (1.0 - math.Sqrt(sumsq/norm)))
+							geo.density[x+x1][y+y1][z+z1] = density
+						}
+					}
+				}
 			}
 		}
 	}
@@ -482,6 +543,10 @@ func CreateObject(geometricObject string) error {
 		geo.createBox()
 	case "hyperbolicparaboloid":
 		geo.createHyperbolicParaboloid()
+	case "cylindersurface":
+		geo.createCylinder()
+	case "cylindersolid":
+		geo.createCylinderSolid()
 	default:
 		fmt.Printf("create geometric object unknown case: '%s'\n", geometricObject)
 		return fmt.Errorf("create geometric object unknown case %s", geometricObject)
