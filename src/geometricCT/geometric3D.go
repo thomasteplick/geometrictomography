@@ -52,6 +52,124 @@ func (geo *GeoObject) createPlane() {
 	}
 }
 
+// cardioid of revolution, surface
+func (geo *GeoObject) createCardioidRevolution() {
+	// use polar coordinates, (r, theta), 0<=theta<2pi
+	// r=a(1-cos(theta)), rotate cardioid(r,theta) about x axis to create 3D surface
+	x1 := planeDim / 2
+	y1 := planeDim / 2
+	z1 := planeDim / 2
+	a := x1 / 2
+	del := math.Pi / 180.0
+	shiftx := x1 + a - a/8
+	var black byte = 9
+	// loop over theta, 0<=theta<180
+	theta := 0.0
+	for range 180 {
+		//   calculate r
+		r := float64(a) * (1.0 - math.Cos(theta))
+		// calculate x=r*cos(theta), for (+/-) theta
+		xminus := r * math.Cos(-theta)
+		xplus := r * math.Cos(theta)
+		// calculate h=r*sin(theta)
+		h := r * math.Sin(theta)
+		phi := 0.0
+		// loop over phi, 0<=phi<180
+		for range 180 {
+			// z=h*sin(phi), for (+/-) phi
+			z := h * math.Sin(phi)
+			y := h * math.Cos(phi)
+			// calculate density for (+/-) theta and phi
+			// translate x to (0,planeDim) with planeDim/2+a-a/8 = shiftx
+			// translate (y,z) to (0,planeDim) with planeDim/2
+			geo.density[y1+int(y)][z1+int(z)][int(xminus)+shiftx] = black
+			geo.density[y1+int(y)][z1+int(z)][int(xplus)+shiftx] = black
+			geo.density[y1+int(y)][z1+int(-z)][int(xminus)+shiftx] = black
+			geo.density[y1+int(y)][z1+int(-z)][int(xplus)+shiftx] = black
+			phi += del
+		}
+		theta += del
+	}
+}
+
+// lemniscate of revolution, surface
+func (geo *GeoObject) createLemniscateRevolution() {
+	// use polar coordinates, (r, theta), 0<=theta<2pi
+	// r^2=2*a^2*cos(2*theta), rotate lemniscate(r,theta) about x-axis to create 3D surface
+	x1 := planeDim / 2
+	y1 := planeDim / 2
+	z1 := planeDim / 2
+	a := x1 / 2
+	del := math.Pi / 180.0
+	var black byte = 9
+	K := math.Sqrt(2)
+	K2 := 2.0
+	// loop over theta, 0<=theta<45, and use symmetry to find other values
+	theta := 0.0
+	for range 45 {
+		// calculate r
+		r := K * float64(a) * math.Cos(2.0*theta)
+		// calculate x=r*cos(theta), first quadrant, use symmetry for others
+		x := r * math.Cos(theta)
+		// calculate h=r*sin(theta)
+		h := r * math.Sin(theta)
+		phi := 0.0
+		// loop over phi, 0<=phi<180
+		for range 180 {
+			// z=h*sin(phi), for (+/-) phi
+			// y=h*cos(phi), for (+/-) phi
+			z := K2 * h * math.Sin(phi)
+			y := K2 * h * math.Cos(phi)
+			// calculate density for (+/-) theta and phi
+			// translate (x,y,z) to (0,planeDim) with planeDim/2
+			geo.density[y1+int(y)][z1+int(z)][int(x)+x1] = black
+			geo.density[y1+int(y)][z1+int(z)][int(-x)+x1] = black
+
+			geo.density[y1+int(-y)][z1+int(z)][int(x)+x1] = black
+			geo.density[y1+int(-y)][z1+int(z)][int(-x)+x1] = black
+
+			geo.density[y1+int(y)][z1+int(-z)][int(x)+x1] = black
+			geo.density[y1+int(y)][z1+int(-z)][int(-x)+x1] = black
+
+			geo.density[y1+int(-y)][z1+int(-z)][int(x)+x1] = black
+			geo.density[y1+int(-y)][z1+int(-z)][int(-x)+x1] = black
+
+			phi += del
+		}
+		theta += del
+	}
+}
+
+// potential well, surface, amount of work required to move from 1 to r
+// in height above earth
+func (geo *GeoObject) createPotentialWell() {
+	// use polar coordiates, (r,theta), r>=1, 0<=theta<2pi
+	// w = k*(1-1/r), k=planeDim/2
+	var black byte = 9
+	x1 := planeDim / 2
+	y1 := planeDim / 2
+	z1 := planeDim / 2
+	rmax := 3 * z1 / 4
+	z1c := z1 + rmax/2 - 1
+	del := 2.0 * math.Pi / 360.0
+	// loop r from 1 to planeDim/2
+	for r := 1; r <= rmax; r++ {
+		//   loop theta from 0 to 2pi
+		theta := 0.0
+		for range 360 {
+			//   x=r*cos(theta), y=r*sin(theta), z=k*(1-1/r)
+			x := float64(r) * math.Cos(theta)
+			y := float64(r) * math.Sin(theta)
+			z := float64(r) * (1.0 - 1.0/float64(r))
+			//   center x,y,z in (0,50) by adding planeDim/2
+			geo.density[z1c-int(z)][x1+int(x)][y1+int(y)] = black
+			theta += del
+		}
+	}
+}
+
+//
+
 // elliptic cylinder, surface
 func (geo *GeoObject) createCylinder() {
 	// center (x1,y1,z1)
@@ -398,7 +516,6 @@ func (geo *GeoObject) createConeSolid() {
 			}
 		}
 	}
-
 }
 
 // elliptic parabaloid, surface
@@ -547,6 +664,12 @@ func CreateObject(geometricObject string) error {
 		geo.createCylinder()
 	case "cylindersolid":
 		geo.createCylinderSolid()
+	case "potentialwell":
+		geo.createPotentialWell()
+	case "cardioidrevolution":
+		geo.createCardioidRevolution()
+	case "lemniscaterevolution":
+		geo.createLemniscateRevolution()
 	default:
 		fmt.Printf("create geometric object unknown case: '%s'\n", geometricObject)
 		return fmt.Errorf("create geometric object unknown case %s", geometricObject)
