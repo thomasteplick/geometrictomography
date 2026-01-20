@@ -60,6 +60,7 @@ func (geo *GeoObject) createCardioidRevolution() {
 	y1 := planeDim / 2
 	z1 := planeDim / 2
 	a := x1 / 2
+	// one degree resolution
 	del := math.Pi / 180.0
 	shiftx := x1 + a - a/8
 	var black byte = 9
@@ -92,6 +93,59 @@ func (geo *GeoObject) createCardioidRevolution() {
 	}
 }
 
+// cardiod of revolution, solid with varying density
+func (geo *GeoObject) createCardioidRevolutionSolid() {
+	// use polar coordinates, (r, theta), 0<=theta<2pi
+	// r=a(1-cos(theta)), rotate cardioid(r,theta) about x axis to create 3D surface
+	x1 := planeDim / 2
+	y1 := planeDim / 2
+	z1 := planeDim / 2
+	a := x1 / 2
+	norm := float64(2 * a)
+	var density byte
+	// one degree resolution
+	del := math.Pi / 180.0
+	shiftx := x1 + a - a/8 - 1
+	black := 9.0
+	nrsteps := 3
+	rstep := 1.0 / float64(nrsteps)
+	for i := a; i > 0; i-- {
+		// loop over theta, 0<=theta<180
+		theta := 0.0
+		for range 180 {
+			for n := range nrsteps {
+				// calculate r
+				k := float64(i) - float64(n)*rstep
+				r := float64(k) * (1.0 - math.Cos(theta))
+				// calculate x=r*cos(theta), for (+/-) theta
+				xminus := r * math.Cos(-theta)
+				xplus := r * math.Cos(theta)
+				// calculate h=r*sin(theta)
+				h := r * math.Sin(theta)
+				phi := 0.0
+				// loop over phi, 0<=phi<180
+				for range 180 {
+					// z=h*sin(phi), for (+/-) phi
+					z := h * math.Sin(phi)
+					y := h * math.Cos(phi)
+					// calculate density for (+/-) theta and phi
+					// translate x to (0,planeDim) with planeDim/2+a-a/8 = shiftx
+					// translate (y,z) to (0,planeDim) with planeDim/2
+					// center is the most dense, decreasing as you move away from center
+					density = byte(black * (1.0 - r/norm))
+					geo.density[y1+int(y)][z1+int(z)][int(xminus)+shiftx] = density
+					geo.density[y1+int(y)][z1+int(z)][int(xplus)+shiftx] = density
+					geo.density[y1+int(y)][z1+int(-z)][int(xminus)+shiftx] = density
+					geo.density[y1+int(y)][z1+int(-z)][int(xplus)+shiftx] = density
+					phi += del
+				}
+			}
+			theta += del
+		}
+	}
+	geo.density[y1][z1][shiftx] = byte(black)
+}
+
 // lemniscate of revolution, surface
 func (geo *GeoObject) createLemniscateRevolution() {
 	// use polar coordinates, (r, theta), 0<=theta<2pi
@@ -100,26 +154,26 @@ func (geo *GeoObject) createLemniscateRevolution() {
 	y1 := planeDim / 2
 	z1 := planeDim / 2
 	a := x1 / 2
-	del := math.Pi / 180.0
+	// use 1/2 degree resolution
+	del := math.Pi / 360.0
 	var black byte = 9
 	K := math.Sqrt(2)
-	K2 := 2.0
 	// loop over theta, 0<=theta<45, and use symmetry to find other values
 	theta := 0.0
-	for range 45 {
+	for range 90 {
 		// calculate r
-		r := K * float64(a) * math.Cos(2.0*theta)
+		r := K * float64(a) * math.Sqrt(math.Cos(2.0*theta))
 		// calculate x=r*cos(theta), first quadrant, use symmetry for others
 		x := r * math.Cos(theta)
 		// calculate h=r*sin(theta)
 		h := r * math.Sin(theta)
 		phi := 0.0
-		// loop over phi, 0<=phi<180
+		// loop over phi, 0<=phi<90
 		for range 180 {
 			// z=h*sin(phi), for (+/-) phi
 			// y=h*cos(phi), for (+/-) phi
-			z := K2 * h * math.Sin(phi)
-			y := K2 * h * math.Cos(phi)
+			z := K * h * math.Sin(phi)
+			y := K * h * math.Cos(phi)
 			// calculate density for (+/-) theta and phi
 			// translate (x,y,z) to (0,planeDim) with planeDim/2
 			geo.density[y1+int(y)][z1+int(z)][int(x)+x1] = black
@@ -137,6 +191,154 @@ func (geo *GeoObject) createLemniscateRevolution() {
 			phi += del
 		}
 		theta += del
+	}
+	geo.density[y1][z1][x1] = black
+}
+
+// lemniscate of revolution, solid with varying density
+func (geo *GeoObject) createLemniscateRevolutionSolid() {
+	// use polar coordinates, (r, theta), 0<=theta<2pi
+	// r^2=2*a^2*cos(2*theta), rotate lemniscate(r,theta) about x-axis to create 3D surface
+	x1 := planeDim / 2
+	y1 := planeDim / 2
+	z1 := planeDim / 2
+	a := x1 / 2
+	// use one degree resolution
+	del := math.Pi / 180.0
+	black := 9.0
+	nrsteps := 3
+	rstep := 1.0 / float64(nrsteps)
+	K := math.Sqrt(2)
+	norm := K * float64(a)
+	var density byte
+	for i := a; i > 0; i-- {
+		// loop over theta, 0<=theta<45, and use symmetry to find other values
+		theta := 0.0
+		for range 45 {
+			for n := range nrsteps {
+				// calculate r
+				k := float64(i) - float64(n)*rstep
+				r := K * k * math.Sqrt(math.Cos(2.0*theta))
+				// calculate x=r*cos(theta), first quadrant, use symmetry for others
+				x := r * math.Cos(theta)
+				// calculate h=r*sin(theta)
+				h := r * math.Sin(theta)
+				phi := 0.0
+				// loop over phi, 0<=phi<90
+				for range 90 {
+					// z=h*sin(phi), for (+/-) phi
+					// y=h*cos(phi), for (+/-) phi
+					z := h * math.Sin(phi)
+					y := h * math.Cos(phi)
+					density = byte(black * (1.0 - r/norm))
+					// calculate density for (+/-) theta and phi
+					// translate (x,y,z) to (0,planeDim) with planeDim/2
+					geo.density[y1+int(y)][z1+int(z)][int(x)+x1] = density
+					geo.density[y1+int(y)][z1+int(z)][int(-x)+x1] = density
+
+					geo.density[y1+int(-y)][z1+int(z)][int(x)+x1] = density
+					geo.density[y1+int(-y)][z1+int(z)][int(-x)+x1] = density
+
+					geo.density[y1+int(y)][z1+int(-z)][int(x)+x1] = density
+					geo.density[y1+int(y)][z1+int(-z)][int(-x)+x1] = density
+
+					geo.density[y1+int(-y)][z1+int(-z)][int(x)+x1] = density
+					geo.density[y1+int(-y)][z1+int(-z)][int(-x)+x1] = density
+					phi += del
+				}
+			}
+			theta += del
+		}
+	}
+	geo.density[y1][z1][x1] = byte(black)
+}
+
+// Four-leaved rose of revolution, surface
+func (geo *GeoObject) createRose4LeafRevolution() {
+	// r=4*sin(2*theta), rotate Rose4Leaf(r,theta) about x-axis to create 3D surface
+	// use polar coordinates, (r, theta), 0<=theta<2pi
+	x1 := planeDim / 2
+	y1 := planeDim / 2
+	z1 := planeDim / 2
+	a := x1
+	// one degree resolution
+	del := math.Pi / 180.0
+	var black byte = 9
+	// loop over theta, 0<=theta<90, and use symmetry to find other values
+	theta := 0.0
+	for range 90 {
+		// calculate r
+		r := float64(a) * math.Sin(2.0*theta)
+		// calculate x=r*cos(theta), first quadrant, use symmetry for others
+		x := r * math.Cos(theta)
+		// calculate h=r*sin(theta)
+		h := r * math.Sin(theta)
+		phi := 0.0
+		// loop over phi, 0<=phi<180
+		for range 180 {
+			// z=h*sin(phi), for (+/-) phi
+			// y=h*cos(phi), for (+/-) phi
+			z := h * math.Sin(phi)
+			y := h * math.Cos(phi)
+			// calculate density for (+/-) theta and phi
+			// translate (x,y,z) to (0,planeDim) with planeDim/2
+			geo.density[y1+int(y)][z1+int(z)][int(x)+x1] = black
+			geo.density[y1+int(y)][z1+int(-z)][int(x)+x1] = black
+			geo.density[y1+int(y)][z1+int(z)][int(-x)+x1] = black
+			geo.density[y1+int(y)][z1+int(-z)][int(-x)+x1] = black
+			phi += del
+		}
+		theta += del
+	}
+}
+
+// Four-leaved rose of revolution, solid with varying density
+func (geo *GeoObject) createRose4LeafRevolutionSolid() {
+	// r=4*sin(2*theta), rotate Rose4Leaf(r,theta) about x-axis to create 3D surface
+	// use polar coordinates, (r, theta), 0<=theta<2pi
+	x1 := planeDim / 2
+	y1 := planeDim / 2
+	z1 := planeDim / 2
+	a := x1
+	// one degree resolution
+	del := math.Pi / 180.0
+	black := 9.0
+
+	nrsteps := 3
+	rstep := 1.0 / float64(nrsteps)
+	norm := float64(a)
+	var density byte
+	for i := a; i >= 0; i-- {
+		// loop over theta, 0<=theta<90, and use symmetry to find other values
+		theta := 0.0
+		for range 90 {
+			for n := range nrsteps {
+				k := float64(i) - float64(n)*rstep
+				// calculate r
+				r := float64(k) * math.Sin(2.0*theta)
+				// calculate x=r*cos(theta), first quadrant, use symmetry for others
+				x := r * math.Cos(theta)
+				// calculate h=r*sin(theta)
+				h := r * math.Sin(theta)
+				phi := 0.0
+				// loop over phi, 0<=phi<180
+				for range 180 {
+					// z=h*sin(phi), for (+/-) phi
+					// y=h*cos(phi), for (+/-) phi
+					z := h * math.Sin(phi)
+					y := h * math.Cos(phi)
+					// calculate density for (+/-) theta and phi
+					// translate (x,y,z) to (0,planeDim) with planeDim/2
+					density = byte(black * (1.0 - r/norm))
+					geo.density[y1+int(y)][z1+int(z)][int(x)+x1] = density
+					geo.density[y1+int(y)][z1+int(-z)][int(x)+x1] = density
+					geo.density[y1+int(y)][z1+int(z)][int(-x)+x1] = density
+					geo.density[y1+int(y)][z1+int(-z)][int(-x)+x1] = density
+					phi += del
+				}
+			}
+			theta += del
+		}
 	}
 }
 
@@ -668,8 +870,16 @@ func CreateObject(geometricObject string) error {
 		geo.createPotentialWell()
 	case "cardioidrevolution":
 		geo.createCardioidRevolution()
+	case "cardioidrevolutionsolid":
+		geo.createCardioidRevolutionSolid()
 	case "lemniscaterevolution":
 		geo.createLemniscateRevolution()
+	case "lemniscaterevolutionsolid":
+		geo.createLemniscateRevolutionSolid()
+	case "rose4leafrevolution":
+		geo.createRose4LeafRevolution()
+	case "rose4leafrevolutionsolid":
+		geo.createRose4LeafRevolutionSolid()
 	default:
 		fmt.Printf("create geometric object unknown case: '%s'\n", geometricObject)
 		return fmt.Errorf("create geometric object unknown case %s", geometricObject)
